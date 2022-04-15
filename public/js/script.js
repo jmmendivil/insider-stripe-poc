@@ -96,6 +96,7 @@ async function setupStripeElements (publicKey, setupIntent) {
 
     })
     logObj('Update', result)
+    showLoading(this, false)
   }
 }
 
