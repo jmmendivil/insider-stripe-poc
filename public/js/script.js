@@ -80,6 +80,29 @@ async function setupStripeElements (publicKey, setupIntent) {
     */
     // TODO: test confirmSetup()
     showLoading(this, true)
+    // confirmCardSetup will create a new payment method behind the scenes
+    const confirmIntent = await stripe.confirmCardSetup(setupIntent.client_secret, {
+      payment_method: {
+        card: cardElement,
+        billing_details: {
+          name: 'Jon Doe',
+          address: {
+            postal_code: 90210
+          }
+        }
+      }
+    })
+
+    if (confirmIntent.error) {
+      console.error(confirmIntent.error)
+      $card.classList.add('is-error')
+      $message.innerText = confirmIntent.error.message
+      showLoading(this, false)
+      return 
+    }
+
+    logObj('Confirm setup', confirmIntent.setupIntent)
+    /*
     const { paymentMethod } = await stripe.createPaymentMethod({
       type: 'card',
       card: cardElement,
@@ -88,14 +111,14 @@ async function setupStripeElements (publicKey, setupIntent) {
       }
     })
     logObj('PaymentMethod', paymentMethod)
+    */
 
     const customerId = document.getElementById('customer-js').value
-    const result = await _fetch(`/customer/${customerId}/add-payment-method`, 'POST', {
+    const addPayment = await _fetch(`/customer/${customerId}/add-payment-method`, 'POST', {
       customerId,
-      paymentMethodId: paymentMethod.id
-
+      paymentMethodId: confirmIntent.setupIntent.payment_method
     })
-    logObj('Update', result)
+    logObj('Update', addPayment)
     showLoading(this, false)
   }
 }
