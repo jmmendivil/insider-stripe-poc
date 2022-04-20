@@ -1,15 +1,10 @@
+require('dotenv').config()
 const express = require('express')
 const bodyParser = require('body-parser')
 const path = require('path')
 const app = express()
-const PORT = 3000
 
-const KEYS = {
-  public: '<PUBLIC-STRIPE-KEY>',
-  private: '<PRIVATE-STRIPE-KEY>'
-}
-
-const stripe = require('stripe')(KEYS.private)
+const stripe = require('stripe')(process.env.STRIPE_SK_KEY)
 
 app.use(express.static('public'))
 app.use(bodyParser.json())
@@ -18,6 +13,7 @@ app.set('views', path.join(__dirname, 'src/views'))
 app.set('view engine', 'hbs')
 
 app.get('/', (req, res) => res.render('index.hbs'))
+app.get('/google-apple', (req, res) => res.render('google-apple.hbs'))
 
 // - Customer
 app.get('/customer/:customerId', async (req, res) => {
@@ -31,6 +27,9 @@ app.get('/customer/:customerId/payment-methods', async (req, res) => {
     customerId,
     { type: 'card' }
   ))
+})
+app.get('/customer/:customerId/payment-methods/:paymentMethodId', async (req, res) => {
+  res.send(await stripe.paymentMethods.retrieve(req.params.paymentMethodId))
 })
 
 app.post('/customer/:customerId/add-payment-method', async (req, res) => {
@@ -126,11 +125,26 @@ app.post('/create-setup-intent', async (req, res) => {
   }))
 })
 
-// - Get public key
-app.get('/public-key', (req, res) => {
-  res.send({ publicKey: KEYS.public })
+// - Payment Intent
+app.post('/create-payment-intent', async (req, res) => {
+  res.send(await stripe.paymentIntents.create({
+    customer: req.body.customerId,
+    amount: 1099,
+    currency: 'usd',
+    payment_method_types: ['card'], // default
+    // usage: 'off_session',
+    // metadata: {
+      // customer_id: req.body.customerId,
+      // subscription_id: req.body.subscriptionId,
+    // }
+  }))
 })
 
-app.listen(PORT, () => {
-  console.log(`listening on port ${PORT}!`)
+// - Get public key
+app.get('/public-key', (req, res) => {
+  res.send({ publicKey: process.env.STRIPE_PK_KEY })
+})
+
+app.listen(process.env.HTTP_PORT, () => {
+  console.log('\x1b[36m%s\x1b[0m',`>> Listening on port ${process.env.HTTP_PORT}!`)
 })

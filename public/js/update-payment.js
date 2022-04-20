@@ -296,3 +296,18 @@ async function getCustomerPaymentMethods() {
   logObj('Cards', cards)
 }
 
+const btnDefaultPaymentMethod = document.getElementById('btn-default-payment-method')
+btnDefaultPaymentMethod.addEventListener('click', getDefaultPaymentMethod)
+async function getDefaultPaymentMethod () {
+  showLoading(this, true)
+  const customerInput = document.getElementById('customer-js')
+
+  if (!window.defaultMethod) await getCustomer.call(this)
+
+  const paymentMethod = window.defaultMethod
+
+  const cards = await _fetch(`/customer/${customerInput.value}/payment-methods/${paymentMethod}`)
+  displayPaymentMethods([cards], paymentMethod)
+  showLoading(this, false)
+  logObj('Cards', cards)
+}
