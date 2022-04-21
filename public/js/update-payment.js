@@ -98,7 +98,7 @@ async function setupStripeElements (publicKey, setupIntent) {
       $card.classList.add('is-error')
       $message.innerText = confirmIntent.error.message
       showLoading(this, false)
-      return 
+      return
     }
 
     logObj('Confirm setup', confirmIntent.setupIntent)
@@ -123,35 +123,29 @@ async function setupStripeElements (publicKey, setupIntent) {
   }
 }
 
-function displayPaymentMethods (cards, defaultMethod) {
-  const tpl = ({ id, city, country, state, line1, line2, postal_code, brand, last4, exp_month, exp_year, name, isDefault }) => `
+function displayPaymentMethods (cards, defaultMethod, customer) {
+  const tpl = ({ id, billing_country, billing_postal_code, billing_state, card_postal_code, brand, last4, exp_month, exp_year, isDefault }) => `
   <div class="columns payment-method ${isDefault ? 'bg-secondary' : ''}" id="${id}">
+
+    <div class="column col-12 label">Billing Address</div>
+    <div class="column col-4 form-group">
+      <input class="form-input billing-country" type="text" placeholder="Country" value="${billing_country}">
+    </div>
+    <div class="column col-4 form-group">
+      <input class="form-input billing-state" type="text" placeholder="State" value="${billing_state}">
+    </div>
+    <div class="column col-4 form-group">
+      <input class="form-input billing-postal-code" type="text" placeholder="Postal Code" value="${billing_postal_code}">
+    </div>
+
     <div class="column col-12">
       <span class="label">${id}</span>
       ${isDefault ? '<span class="label label-rounded label-primary float-right">Default</span>' : ''}
     </div>
-    <div class="column col-4 form-group">
-      <input class="form-input city" type="text" placeholder="City" value="${city}">
+    <div class="column col-2">
+      <span class="label label-primary">${brand}</span>
     </div>
     <div class="column col-4 form-group">
-      <input class="form-input country" type="text" placeholder="Country" value="${country}">
-    </div>
-    <div class="column col-4 form-group">
-      <input class="form-input state" type="text" placeholder="State" value="${state}">
-    </div>
-    <div class="column col-4 form-group">
-      <input class="form-input line1" type="text" placeholder="Line 1" value="${line1}">
-    </div>
-    <div class="column col-4 form-group">
-      <input class="form-input line2" type="text" placeholder="Line 2" value="${line2}">
-    </div>
-    <div class="column col-4 form-group">
-      <input class="form-input postal-code" type="text" placeholder="Postal Code" value="${postal_code}">
-    </div>
-    <div class="column col-2 form-group">
-      <input class="form-input brand" type="text" placeholder="Brand" value="${brand}">
-    </div>
-    <div class="column col-6 form-group">
       <input class="form-input card disabled" type="text" placeholder="Card" value="************${last4}">
     </div>
     <div class="column col-2 form-group">
@@ -160,26 +154,24 @@ function displayPaymentMethods (cards, defaultMethod) {
     <div class="column col-2 form-group">
       <input class="form-input exp-year" type="text" placeholder="Exp year" value="${exp_year}">
     </div>
-    <div class="column col-12 form-group">
-      <input class="form-input name" type="text" placeholder="Name" value="${name}">
+    <div class="column col-2 form-group">
+      <input class="form-input card-postal-code" type="text" placeholder="Postal Code" value="${card_postal_code}">
     </div>
     <div class="column col-6 form-group has-icon-right">
-    ${!isDefault ? `<button class="btn btn-block btn-default-card btn-link">Set Default</button>` : ''}
+    ${!isDefault ? `<button class="btn btn-block btn-default-card">Set Default</button>` : ''}
     </div>
     <div class="column col-6 form-group has-icon-right">
-      <button class="btn btn-block btn-update-card">Update</button>
+      <button class="btn btn-primary btn-block btn-update-card">Update</button>
     </div>
   </div>
   ${!isDefault ? '<div class="bar bar-sm"></div>' : ''}`
+
   const cardsTpl = cards.map(card => tpl({
     id: card.id ?? '',
-    city: card.billing_details.address.city ?? '',
-    country: card.billing_details.address.country ?? '',
-    state: card.billing_details.address.state ?? '',
-    line1: card.billing_details.address.line1 ?? '',
-    line2: card.billing_details.address.line2 ?? '',
-    postal_code: card.billing_details.address.postal_code ?? '',
-    name: card.billing_details.name ?? '',
+    billing_country: customer.address.country ?? '',
+    billing_state: customer.address.state ?? '',
+    billing_postal_code: customer.address.postal_code ?? '',
+    card_postal_code: card.billing_details.address.postal_code ?? '',
     brand: card.card.brand ?? '',
     last4: card.card.last4 ?? '',
     exp_month: card.card.exp_month ?? '',
@@ -215,19 +207,20 @@ async function updateCard (evt) {
   const container = evt.target.parentElement.parentElement
   const id = container.id
   const customerId = document.getElementById('customer-js').value
+  const customer = await _fetch(`/customer/${customerId}/update-billing-address`, 'PATCH', {
+    country: container.querySelector('.billing-country').value,
+    state: container.querySelector('.billing-state').value,
+    postal_code: container.querySelector('.billing-postal-code').value
+  })
   const payment = await _fetch(`/customer/${customerId}/update-payment-method/${id}`, 'PATCH', {
-    city: container.querySelector('.city').value,
-    country: container.querySelector('.country').value,
-    state: container.querySelector('.state').value,
-    line1: container.querySelector('.line1').value,
-    line2: container.querySelector('.line2').value,
-    postal_code: container.querySelector('.postal-code').value,
+    postal_code: container.querySelector('.card-postal-code').value,
     exp_month: container.querySelector('.exp-month').value,
     exp_year: container.querySelector('.exp-year').value,
-    name: container.querySelector('.name').value
   })
+
   showLoading(this, false)
   logObj('Updated', payment)
+  logObj('CustomerUpdated', customer)
   await getCustomer.call(this)
   await getCustomerPaymentMethods.call(this)
 }
@@ -291,7 +284,8 @@ async function getCustomerPaymentMethods() {
   showLoading(this, true)
   const customerInput = document.getElementById('customer-js')
   const cards = await _fetch(`/customer/${customerInput.value}/payment-methods`)
-  displayPaymentMethods(cards.data, window.defaultMethod)
+  const customer = await _fetch(`/customer/${customerInput.value}`)
+  displayPaymentMethods(cards.data, window.defaultMethod, customer)
   showLoading(this, false)
   logObj('Cards', cards)
 }
@@ -307,7 +301,8 @@ async function getDefaultPaymentMethod () {
   const paymentMethod = window.defaultMethod
 
   const cards = await _fetch(`/customer/${customerInput.value}/payment-methods/${paymentMethod}`)
-  displayPaymentMethods([cards], paymentMethod)
+  const customer = await _fetch(`/customer/${customerInput.value}`)
+  displayPaymentMethods([cards], paymentMethod, customer)
   showLoading(this, false)
   logObj('Cards', cards)
 }

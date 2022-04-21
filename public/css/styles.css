@@ -4,9 +4,10 @@ body {
 pre:first-child {
   margin-top: 0;
 }
-.bar, .label {
-  margin-bottom: .3rem;
+.bar,
+.label {
+  margin-bottom: 0.3rem;
 }
 .payment-method {
-  padding: .4rem 0;
+  padding: 0.4rem 0;
 }
