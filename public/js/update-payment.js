@@ -34,7 +34,7 @@ function registerElementEvents (stripeElement, container, message) {
     }
   })
 }
-async function setupStripeElements (publicKey, setupIntent, input) {
+async function setupStripeElements (publicKey, setupIntent) {
   const styles = {
     classes: { base: 'form-input' },
     style: {
@@ -57,10 +57,8 @@ async function setupStripeElements (publicKey, setupIntent, input) {
   const stripe = await Stripe(publicKey)
   const elements = stripe.elements({ clientSecret: setupIntent.client_secret })
 
-  // const $card = document.querySelector('#card-sjs')
-  // const $message = document.querySelector('.input-message-js')
-  const $card = input.card
-  const $message = input.message
+  const $card = document.querySelector('#card-sjs')
+  const $message = document.querySelector('.input-message-js')
 
   const cardElement = elements.create('card', styles)
   cardElement.mount($card)
@@ -263,7 +261,7 @@ async function getSubs() {
 // -- Element
 const btnCreateElement = document.getElementById('btn-element')
 btnCreateElement.addEventListener('click', createElement)
-async function createElement(input) {
+async function createElement() {
   showLoading(this, true)
   const { publicKey } = await _fetch('/public-key', 'GET')
 
@@ -272,7 +270,7 @@ async function createElement(input) {
   const setupIntent = await _fetch('/create-setup-intent', 'POST', { customerId, subscriptionId })
   logObj('Intent', setupIntent)
 
-  setupStripeElements(publicKey, setupIntent, input)
+  setupStripeElements(publicKey, setupIntent)
   showLoading(this, false)
 }
 
