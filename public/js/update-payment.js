@@ -124,15 +124,12 @@ async function setupStripeElements (publicKey, setupIntent) {
 }
 
 function displayPaymentMethods (cards, defaultMethod, customer) {
-  const tpl = ({ id, billing_country, billing_postal_code, billing_state, card_postal_code, brand, last4, exp_month, exp_year, isDefault }) => `
+  const tpl = ({ id, billing_country, billing_postal_code, card_postal_code, brand, last4, exp_month, exp_year, isDefault }) => `
   <div class="columns payment-method ${isDefault ? 'bg-secondary' : ''}" id="${id}">
 
     <div class="column col-12 label">Billing Address</div>
     <div class="column col-4 form-group">
       <input class="form-input billing-country" type="text" placeholder="Country" value="${billing_country}">
-    </div>
-    <div class="column col-4 form-group">
-      <input class="form-input billing-state" type="text" placeholder="State" value="${billing_state}">
     </div>
     <div class="column col-4 form-group">
       <input class="form-input billing-postal-code" type="text" placeholder="Postal Code" value="${billing_postal_code}">
@@ -169,7 +166,6 @@ function displayPaymentMethods (cards, defaultMethod, customer) {
   const cardsTpl = cards.map(card => tpl({
     id: card.id ?? '',
     billing_country: customer.address.country ?? '',
-    billing_state: customer.address.state ?? '',
     billing_postal_code: customer.address.postal_code ?? '',
     card_postal_code: card.billing_details.address.postal_code ?? '',
     brand: card.card.brand ?? '',
@@ -209,7 +205,6 @@ async function updateCard (evt) {
   const customerId = document.getElementById('customer-js').value
   const customer = await _fetch(`/customer/${customerId}/update-billing-address`, 'PATCH', {
     country: container.querySelector('.billing-country').value,
-    state: container.querySelector('.billing-state').value,
     postal_code: container.querySelector('.billing-postal-code').value
   })
   const payment = await _fetch(`/customer/${customerId}/update-payment-method/${id}`, 'PATCH', {
@@ -281,6 +276,8 @@ async function getCustomer() {
 const btnGetPaymentMethods = document.getElementById('btn-paymentMethods')
 btnGetPaymentMethods.addEventListener('click', getCustomerPaymentMethods)
 async function getCustomerPaymentMethods() {
+  document.getElementById('checkout-payment-method-list').classList.add('d-none')
+  document.getElementById('checkout-message').classList.add('d-none')
   showLoading(this, true)
   const customerInput = document.getElementById('customer-js')
   const cards = await _fetch(`/customer/${customerInput.value}/payment-methods`)
@@ -293,6 +290,9 @@ async function getCustomerPaymentMethods() {
 const btnDefaultPaymentMethod = document.getElementById('btn-default-payment-method')
 btnDefaultPaymentMethod.addEventListener('click', getDefaultPaymentMethod)
 async function getDefaultPaymentMethod () {
+  document.getElementById('payment-methods').classList.remove('d-none')
+  document.getElementById('checkout-payment-method-list').classList.add('d-none')
+  document.getElementById('checkout-message').classList.add('d-none')
   showLoading(this, true)
   const customerInput = document.getElementById('customer-js')
 
@@ -305,4 +305,124 @@ async function getDefaultPaymentMethod () {
   displayPaymentMethods([cards], paymentMethod, customer)
   showLoading(this, false)
   logObj('Cards', cards)
+}
+
+// - Checkout
+async function displayCheckoutOptions (card, subscription) {
+  const tpl = `
+  <div class="columns">
+    <div class="column col-12 label">${subscription.id}</div>
+    <div class="column col-12 form-group">
+      <label class="form-radio">
+        <input type="radio" name="checkout" checked value="valid">
+        <i class="form-icon"></i><span class="label label-secondary">Valid *${card.card.last4} -- Expires in ${card.card.exp_month}/${card.card.exp_year}</span>
+      </label>
+      <label class="form-radio">
+        <input type="radio" name="checkout" value="auth">
+        <i class="form-icon"></i> <span class="label label-warning">Authentication Required *3155 -- Expires in 04/2024</span>
+      </label>
+      <label class="form-radio">
+        <input type="radio" name="checkout" value="invalid">
+        <i class="form-icon"></i> <span class="label label-error">Invalid Required *0341 -- Expires in 01/2023</span>
+      </label>
+    </div>
+
+    <div class="column col-6 form-group">
+      <button class="btn btn-primary btn-block btn-confirm-card">Confirm</button>
+    </div>
+  </div>
+`
+
+  // remove existing btns
+  let btnConfirm = document.querySelector('.btn-confirm-card')
+  if (btnConfirm) {
+    btnConfirm.removeEventListener('click', confirmCheckout)
+  }
+
+  document.getElementById('checkout-payment-method-list').innerHTML = tpl
+
+  // add new btns
+  btnConfirm = document.querySelector('.btn-confirm-card')
+  btnConfirm.addEventListener('click', confirmCheckout)
+}
+
+
+// show checkout with payment options
+const btnGetCheckout = document.getElementById('btn-checkout')
+btnGetCheckout.addEventListener('click', getCheckout)
+async function getCheckout() {
+  document.getElementById('checkout-message').classList.add('d-none')
+  document.getElementById('checkout-payment-method-list').classList.remove('d-none')
+  document.getElementById('payment-methods').classList.add('d-none')
+
+  showLoading(this, true)
+  const customerInput = document.getElementById('customer-js')
+  const customer = await _fetch(`/customer/${customerInput.value}`)
+  const paymentMethodId = customer.invoice_settings.default_payment_method
+  const card = await _fetch(`/customer/${customerInput.value}/payment-methods/${paymentMethodId}`)
+  const subscription = await _fetch(`/customers/${customerInput.value}/create-subscriptions`, 'POST', {
+    priceId: 'price_1KlaEPEv92Ty3pFACO4AZb9K'
+  })
+
+  window.subscription = subscription
+  displayCheckoutOptions(card, subscription)
+
+  showLoading(this, false)
+
+  logObj('Customer', customer)
+  logObj('Card', card)
+  logObj('Subscription', subscription)
+}
+
+// pay invoice with existing payment method
+async function confirmCheckout (evt) {
+  document.getElementById('checkout-message').classList.add('d-none')
+  showLoading(this, true)
+
+  const customerInput = document.getElementById('customer-js')
+  let subscription = window.subscription
+  const customer = await _fetch(`/customer/${customerInput.value}`)
+  const option = document.querySelector('input[name="checkout"]:checked').value
+
+  const { publicKey } = await _fetch('/public-key', 'GET')
+  const stripe = await Stripe(publicKey)
+
+  let paymentIntent
+
+  switch (option) {
+    case 'auth':
+      paymentIntent = await stripe.confirmCardPayment(subscription.latest_invoice.payment_intent.client_secret, {
+        payment_method: 'pm_1KrEb0Ev92Ty3pFADCNUoZjA'
+      })
+      break
+    case 'invalid':
+      paymentIntent = await stripe.confirmCardPayment(subscription.latest_invoice.payment_intent.client_secret, {
+        payment_method: 'pm_1KrEtOEv92Ty3pFAGdQ3w1Tn'
+    })
+    break
+    default:
+      paymentIntent = await stripe.confirmCardPayment(subscription.latest_invoice.payment_intent.client_secret, {
+        payment_method: customer.invoice_settings.default_payment_method
+      })
+      break
+  }
+
+
+  let resultMessage = `Succeed. Subscription ${subscription.id} is active!`
+  if (paymentIntent.error) {
+    resultMessage = paymentIntent.error.message
+  }
+
+  subscription = await _fetch(`/subscriptions/${subscription.id}`)
+
+
+  showLoading(this, false)
+  logObj('Payment Intent', paymentIntent)
+  logObj('Subscription', subscription)
+
+  document.getElementById('checkout-message').innerHTML = `<div>${resultMessage}</div>`
+
+  await getCustomer.call(this)
+  document.getElementById('checkout-message').classList.remove('d-none')
+  document.getElementById('checkout-payment-method-list').classList.add('d-none')
 }

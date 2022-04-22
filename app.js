@@ -138,14 +138,26 @@ app.post('/create-setup-intent', async (req, res) => {
 app.post('/create-payment-intent', async (req, res) => {
   res.send(await stripe.paymentIntents.create({
     customer: req.body.customerId,
-    amount: 1099,
-    currency: 'usd',
-    payment_method_types: ['card'], // default
+    amount: req.body.amount,
+    currency: req.body.currency,
+    confirm: true,
+    payment_method: req.body.paymentMethodId
     // usage: 'off_session',
     // metadata: {
       // customer_id: req.body.customerId,
       // subscription_id: req.body.subscriptionId,
     // }
+  }))
+})
+
+// - Create a subscription
+app.post('/customers/:customerId/create-subscriptions', async (req, res) => {
+  res.send(await stripe.subscriptions.create({
+    customer: req.params.customerId,
+    items: [{ price: req.body.priceId }],
+    payment_behavior: 'default_incomplete',
+    automatic_tax: { enabled: true },
+    expand: ['latest_invoice.payment_intent']
   }))
 })
 
