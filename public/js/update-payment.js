@@ -419,8 +419,10 @@ async function confirmCheckout () {
 }
 async function addNewCard () {
   document.getElementById('checkout-payment-option').classList.add('d-none')
+  document.querySelector('.checkout-form').classList.remove('d-none')
+  document.querySelector('.checkout-form-btn').classList.remove('d-none')
 
-  const subscription = window.subscription
+  subscription = window.subscription
   const PM_SECRET = subscription.latest_invoice.payment_intent.client_secret
 
   async function setupNewStripeElements (publicKey) {
@@ -467,12 +469,14 @@ async function addNewCard () {
       logObj('Update', setDefaultPayment)
       showLoading(this, false)
 
-      const newSubscription = await _fetch(`/subscriptions/${subscription.id}`)
+      subscription = await _fetch(`/subscriptions/${subscription.id}`)
 
       showLoading(this, false)
-      logObj('Subscription', newSubscription)
+      logObj('Subscription', subscription)
 
       document.getElementById('checkout-message').classList.remove('d-none')
+      document.querySelector('.checkout-form').classList.add('d-none')
+      document.querySelector('.checkout-form-btn').classList.add('d-none')
     }
   }
 
