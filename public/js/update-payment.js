@@ -476,3 +476,89 @@ async function addNewCard () {
   setupNewStripeElements(publicKey)
   showLoading(this, false)
 }
+
+
+//---------------------------------------------------------
+// new user flow
+const btnNewUser = document.getElementById('btn-user-js')
+btnNewUser.addEventListener('click', createNewUser)
+async function createNewUser() {
+  showLoading(this, true)
+  document.getElementById('add-user-js').classList.remove('d-none')
+
+  const customerInput = document.getElementById('new-customer-js')
+  const customer = await _fetch(`/customers`, 'POST', {
+    email: customerInput.value,
+    address: {
+      country: 'US',
+      postal_code: 10006
+    }
+  })
+
+  const setupIntent = await _fetch('/create-setup-intent', 'POST', { customerId: customer.id })
+  logObj('Intent', setupIntent)
+
+  document.querySelector('.new-checkout-form').classList.remove('d-none')
+  document.querySelector('.new-checkout-form-btn').classList.remove('d-none')
+
+  const { publicKey } = await _fetch('/public-key', 'GET')
+
+  const stripe = await Stripe(publicKey)
+  const elements = stripe.elements({ clientSecret: setupIntent.client_secret })
+
+  const $card = document.querySelector('#new-user-card-sjs')
+  const $message = document.querySelector('.new-user-input-message-js')
+
+  const cardElement = elements.create('card', styles)
+  cardElement.mount($card)
+  registerElementEvents(cardElement, $card, $message)
+
+  // - Submit
+  document.getElementById('new-user-add-card-js').classList.remove('d-none') // show update btn
+  const btnSubmit = document.getElementById('new-user-btn-add-js')
+  btnSubmit.addEventListener('click', submitCard)
+  async function submitCard () {
+    showLoading(this, true)
+
+    const confirmIntent = await stripe.confirmCardSetup(setupIntent.client_secret, {
+      payment_method: {
+        card: cardElement
+      }
+    })
+
+    logObj('Confirm Intent', confirmIntent)
+
+    if (confirmIntent.error) {
+      console.error(confirmIntent.error)
+      $card.classList.add('is-error')
+      $message.innerText = confirmIntent.error.message
+      showLoading(this, false)
+      return
+    }
+
+    const setDefaultPayment = await _fetch(`/customer/${customer.id}/add-payment-method`, 'POST', {
+      paymentMethodId: confirmIntent.setupIntent.payment_method
+    })
+    console.log('======================= ~ setDefaultPayment', setDefaultPayment)
+
+    const subscriptionSchedule = await _fetch(`/customers/${customer.id}/create-subscription-schedules`, 'POST', {
+      priceId: 'price_1KlaEPEv92Ty3pFACO4AZb9K'
+    })
+
+    const subscription = await _fetch(`/subscriptions/${subscriptionSchedule.subscription}`)
+
+
+    const invoice = await _fetch(`/pay-invoice`, 'POST', {
+      invoiceId: subscription.latest_invoice.id
+    })
+    console.log('======================= ~ invoice', invoice)
+
+    logObj('Update', setDefaultPayment)
+    logObj('Subscription Schedule', subscriptionSchedule)
+    logObj('Subscription', subscription)
+    showLoading(this, false)
+  }
+
+  showLoading(this, false)
+  logObj('Customer', customer)
+}
