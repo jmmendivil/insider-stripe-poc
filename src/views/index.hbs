@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -16,11 +17,11 @@
   </head>
   <body>
 
-    <div class="container">
+    <div class="container grid-md">
       <div class="columns">
 
         {{!  Subscription  }}
-        <div class="column col-6">
+        <div class="column col-sm-12">
           <div class="form-js form-group">
 
             <div class="form-group">
@@ -43,6 +44,7 @@
             </div>
 
             <div class="form-group">
+              <div id="payment-request-js"></div>
               <div id="card-sjs"></div>
               <p class="input-message-js form-input-hint"></p>
             </div>
@@ -56,14 +58,14 @@
         </div>
 
         {{!  Customer  }}
-        <div class="column col-6">
+        <div class="column col-sm-12">
           <div class="form-group">
             <input
               class="form-input"
               type="text"
               id="customer-js"
               placeholder="Client ID"
-              value="cus_KRx6qW2xK9G97j"
+              value="cus_LVfuhzt4MXaXKm"
             />
           </div>
           <div class="form-group">
@@ -78,6 +80,9 @@
           <div id="checkout-payment-option"></div>
           <div id="checkout-message"></div>
         </div>
+      </div>
+      <div class="columns">
+        <pre id="console"></pre>
       </div>
 
     </div>
