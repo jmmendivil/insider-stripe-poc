@@ -596,26 +596,94 @@ async function createNewUser() {
     const setDefaultPayment = await _fetch(`/customer/${customer.id}/add-payment-method`, 'POST', {
       paymentMethodId: confirmIntent.setupIntent.payment_method
     })
+    logObj('Update', setDefaultPayment)
 
     const subscriptionSchedule = await _fetch(`/customers/${customer.id}/create-subscription-schedules`, 'POST', {
       priceId: 'price_1KlaEPEv92Ty3pFACO4AZb9K'
     })
+    logObj('Subscription Schedule', subscriptionSchedule)
 
     const subscription = await _fetch(`/subscriptions/${subscriptionSchedule.subscription}`)
+    logObj('Subscription', subscription)
 
 
     const invoice = await _fetch(`/pay-invoice`, 'POST', {
       invoiceId: subscription.latest_invoice.id
     })
-
-    logObj('Update', setDefaultPayment)
-    logObj('Subscription Schedule', subscriptionSchedule)
-    logObj('Subscription', subscription)
     logObj('Invoice', invoice)
+
     showLoading(this, false)
 
     document.getElementById('new-user-checkout-message').innerHTML = `Subscription ${subscription.id} is created!`
   }
+
+  // --- PaymentRequest Button
+  const paymentRequest = stripe.paymentRequest({
+    country: 'US',
+    currency: 'mxn',
+    // currency: 'usd',
+    total: {
+      label: 'Add new card',
+      amount: 0,
+    },
+    requestPayerName: true,
+    requestPayerEmail: true,
+  })
+
+  // apple/google pay
+  const $paymentRequest = document.querySelector('#new-payment-request-js')
+  const canUsePaymentRequest = await paymentRequest.canMakePayment()
+  if (canUsePaymentRequest) {
+    const prButton = elements.create('paymentRequestButton', { paymentRequest })
+    prButton.mount($paymentRequest)
+  } else {
+    console.error('Can not load payment request', canUsePaymentRequest)
+    $paymentRequest.classList.add('form-input-hint')
+    $paymentRequest.innerHTML = 'No wallet with supported networks detected :c'
+  }
+
+  paymentRequest.on('paymentmethod', async (evt) => {
+    console.dir(evt)
+    const confirmIntent = await stripe.confirmCardSetup(setupIntent.client_secret,
+      { payment_method: evt.paymentMethod.id },
+      // { handleActions: false }
+    )
+
+    console.dir(confirmIntent)
+
+    if (confirmIntent.error) {
+      console.error(confirmIntent.error)
+      evt.complete('fail')
+      $card.classList.add('is-error')
+      $message.innerText = confirmIntent.error
+    } else {
+      evt.complete('success')
+      // update default payment method
+      const updatedPayment = await _fetch(`/customer/${customer.id}/set-default-payment-method`, 'PATCH', {
+        paymentMethodId: evt.paymentMethod.id
+      })
+      showObj('Updated', updatedPayment)
+
+      const subscriptionSchedule = await _fetch(`/customers/${customer.id}/create-subscription-schedules`, 'POST', {
+        priceId: 'price_1KlaEPEv92Ty3pFACO4AZb9K'
+      })
+      logObj('Subscription Schedule', subscriptionSchedule)
+
+      const subscription = await _fetch(`/subscriptions/${subscriptionSchedule.subscription}`)
+      logObj('Subscription', subscription)
+
+
+      const invoice = await _fetch(`/pay-invoice`, 'POST', {
+        invoiceId: subscription.latest_invoice.id
+      })
+      logObj('Invoice', invoice)
+
+      showLoading(this, false)
+
+      document.getElementById('new-user-checkout-message').innerHTML = `Subscription ${subscription.id} is created!`
+    }
+    showObj(confirmIntent)
+  })
 
   showLoading(this, false)
   logObj('Customer', customer)
