@@ -101,16 +101,6 @@ async function setupStripeElements (publicKey, setupIntent) {
     }
 
     logObj('Confirm setup', confirmIntent.setupIntent)
-    /*
-    const { paymentMethod } = await stripe.createPaymentMethod({
-      type: 'card',
-      card: cardElement,
-      billing_details: {
-        name: 'Jon Doe'
-      }
-    })
-    logObj('PaymentMethod', paymentMethod)
-    */
 
     const customerId = document.getElementById('customer-js').value
     const addPayment = await _fetch(`/customer/${customerId}/add-payment-method`, 'POST', {
@@ -371,7 +361,6 @@ async function getCheckout() {
     priceId: 'price_1KlaEPEv92Ty3pFACO4AZb9K'
   })
   window.subscription = subscription
-  // const subscription = {id: 1}
   displayCheckoutOptions(card, subscription)
 
   showLoading(this, false)
