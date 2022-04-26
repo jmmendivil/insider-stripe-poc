@@ -20,9 +20,10 @@ function logObj (title, obj) {
   console.groupEnd()
 }
 
-function status (title, obj) {
+function showObj (label = '', obj) {
   const status = document.getElementById('console')
   const code = document.createElement('code')
+  code.dataset.label = label
   code.innerText = JSON.stringify(obj, null, 2)
   status.appendChild(code)
 }
@@ -155,9 +156,9 @@ async function setupStripeElements (publicKey, setupIntent) {
         customerId,
         paymentMethodId: evt.paymentMethod.id
       })
-      status('Updated', updatedPayment)
+      showObj('Updated', updatedPayment)
     }
-    status(confirmIntent)
+    showObj(confirmIntent)
   })
 }
 
@@ -202,7 +203,7 @@ function displayPaymentMethods (cards, customer) {
 
   const cardsTpl = cards.map(card => tpl({
     id: card.id ?? '',
-    billing_country: customer.address.country ?? '',
+    billing_country: customer.address?.country ?? '',
     postal_code: card.billing_details.address.postal_code ?? '',
     brand: card.card.brand ?? '',
     last4: card.card.last4 ?? '',
@@ -261,7 +262,6 @@ async function updateCard (evt) {
   showLoading(this, false)
   logObj('Updated', payment)
   logObj('CustomerUpdated', customer)
-  await getCustomer.call(this)
   await getCustomerPaymentMethods.call(this)
 }
 
@@ -273,7 +273,6 @@ async function setDefaultCard (evt) {
   const response = await _fetch(`/customer/${customerId}/set-default-payment-method`, 'PATCH', { paymentMethodId })
   showLoading(this, false)
   logObj('Default', response)
-  await getCustomer.call(this)
   await getCustomerPaymentMethods.call(this)
 }
 
@@ -315,6 +314,7 @@ async function getCustomer() {
 
   showLoading(this, false)
   logObj('Customer', customer)
+  showObj('Customer', customer)
 }
 const btnGetPaymentMethods = document.getElementById('btn-paymentMethods')
 btnGetPaymentMethods.addEventListener('click', getCustomerPaymentMethods)

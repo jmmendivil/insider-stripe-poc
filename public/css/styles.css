@@ -23,3 +23,8 @@ pre:first-child {
   font-size: 12px;
   margin-top: 0.3rem;
 }
+
+code::before {
+  content: attr(data-label);
+  display: block;
+}
