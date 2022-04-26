@@ -1,5 +1,5 @@
 body {
-  padding: 3rem;
+  padding-top: 3rem;
 }
 pre:first-child {
   margin-top: 0;
@@ -10,4 +10,21 @@ pre:first-child {
 }
 .payment-method {
   padding: 0.4rem 0;
+}
+
+#payment-request-js {
+  margin-bottom: 0.3rem;
+}
+#payment-request-js:not(:empty)::after {
+  color: #bcc3ce;
+  content: '-or-';
+  text-align: center;
+  display: block;
+  font-size: 12px;
+  margin-top: 0.3rem;
+}
+
+code::before {
+  content: attr(data-label);
+  display: block;
 }
