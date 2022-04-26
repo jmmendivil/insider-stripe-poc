@@ -446,7 +446,8 @@ async function addNewCard () {
       const confirmIntent = await stripe.confirmCardPayment(PM_SECRET, {
         payment_method: {
           card: cardElement
-        }
+        },
+        setup_future_usage: 'off_session'
       })
 
       if (confirmIntent.error) {
