@@ -150,7 +150,7 @@ app.post('/customers/:customerId/create-subscriptions', async (req, res) => {
 app.post('/customers/:customerId/create-subscription-schedules', async (req, res) => {
   res.send(await stripe.subscriptionSchedules.create({
     customer: req.params.customerId,
-    start_date: Math.round(new Date().getTime() / 1000),
+    start_date: 'now',
     end_behavior: 'release',
     phases: [
       {
