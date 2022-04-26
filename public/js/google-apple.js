@@ -19,6 +19,13 @@ function logObj (title, obj) {
   console.dir(obj)
   console.groupEnd()
 }
+
+function consObj (obj) {
+  const console = document.getElementById('console')
+  const codeElement = document.createElement('code')
+  codeElement.textContent = JSON.stringify(obj, null, 2)
+  console.appendChild(codeElement)
+}
 // <<
 
 // -- Stripe
@@ -73,7 +80,6 @@ async function setupStripeElements (publicKey) {
 
   const prButton = elements.create('paymentRequestButton', { paymentRequest })
   const canUsePaymentRequest = await paymentRequest.canMakePayment()
-  debugger
   if (canUsePaymentRequest) {
     prButton.mount($paymentRequest)
   } else {
@@ -82,7 +88,33 @@ async function setupStripeElements (publicKey) {
   }
 
   paymentRequest.on('paymentmethod', async (evt) => {
-    console.log(evt)
+    console.dir(evt)
+    const customerId = document.getElementById('customer-js').value
+    const intent = await _fetch('/create-payment-intent', 'POST', { customerId }) // send customer
+    console.dir(intent)
+
+    const confirmIntent = await stripe.confirmCardPayment(
+      intent.client_secret,
+      { payment_method: evt.paymentMethod.id },
+      { handleActions: false }
+    )
+
+    console.dir(confirmIntent)
+
+    if (confirmIntent.error) {
+      console.error(confirmIntent.error)
+      evt.complete('fail')
+    } else {
+      evt.complete('success')
+      // update default payment method
+      const updatedPayment = await _fetch(`/customer/${customerId}/set-default-payment-method`, 'PATCH', {
+        customerId,
+        paymentMethodId: evt.paymentMethod.id
+      })
+      consObj(updatedPayment)
+      logObj('Updated', updatedPayment)
+    }
+    consObj(confirmIntent)
   })
 }
 
@@ -94,7 +126,6 @@ btnCreateElement.addEventListener('click', createElement)
 async function createElement() {
   showLoading(this, true)
   const { publicKey } = await _fetch('/public-key', 'GET')
-  // const customerId = document.getElementById('customer-js').value
   setupStripeElements(publicKey)
   showLoading(this, false)
 }

@@ -20,6 +20,13 @@ function logObj (title, obj) {
   console.groupEnd()
 }
 
+function showObj (label = '', obj) {
+  const status = document.getElementById('console')
+  const code = document.createElement('code')
+  code.dataset.label = label
+  code.innerText = JSON.stringify(obj, null, 2)
+  status.appendChild(code)
+}
 const styles = {
   classes: { base: 'form-input' },
   style: {
@@ -55,11 +62,13 @@ function registerElementEvents (stripeElement, container, message) {
 }
 async function setupStripeElements (publicKey, setupIntent) {
   const stripe = await Stripe(publicKey)
-  const elements = stripe.elements({ clientSecret: setupIntent.client_secret })
+  const elements = stripe.elements()
+  // const elements = stripe.elements({ clientSecret: setupIntent.client_secret })
 
   const $card = document.querySelector('#card-sjs')
   const $message = document.querySelector('.input-message-js')
 
+  // --- Card Element
   const cardElement = elements.create('card', styles)
   cardElement.mount($card)
   registerElementEvents(cardElement, $card, $message)
@@ -69,16 +78,6 @@ async function setupStripeElements (publicKey, setupIntent) {
   const btnSubmit = document.getElementById('btn-add-js')
   btnSubmit.addEventListener('click', submitCard)
   async function submitCard () {
-    /*
-    // - Using source with Token
-    const { token } = await stripe.createToken(cardElement)
-        console.dir(result.token.id)
-      }
-    })
-    const customerId = document.getElementById('customer-js').value
-    const result = await _fetch('/update-customer-source', 'POST', { customerId, token })
-    */
-    // TODO: test confirmSetup()
     showLoading(this, true)
     // confirmCardSetup will create a new payment method behind the scenes
     const confirmIntent = await stripe.confirmCardSetup(setupIntent.client_secret, {
@@ -110,10 +109,61 @@ async function setupStripeElements (publicKey, setupIntent) {
     logObj('Update', addPayment)
     showLoading(this, false)
   }
+
+  // --- PaymentRequest Button
+  const paymentRequest = stripe.paymentRequest({
+    country: 'US',
+    currency: 'mxn',
+    // currency: 'usd',
+    total: {
+      label: 'Add new card',
+      amount: 0,
+    },
+    requestPayerName: true,
+    requestPayerEmail: true,
+  })
+
+  const $paymentRequest = document.querySelector('#payment-request-js')
+  const canUsePaymentRequest = await paymentRequest.canMakePayment()
+  if (canUsePaymentRequest) {
+    const prButton = elements.create('paymentRequestButton', { paymentRequest })
+    prButton.mount($paymentRequest)
+  } else {
+    console.error('Can not load payment request', canUsePaymentRequest)
+    $paymentRequest.classList.add('form-input-hint')
+    $paymentRequest.innerHTML = 'No wallet with supported networks detected :c'
+  }
+  paymentRequest.on('paymentmethod', async (evt) => {
+    console.dir(evt)
+    const customerId = document.getElementById('customer-js').value
+
+    const confirmIntent = await stripe.confirmCardSetup(setupIntent.client_secret,
+      { payment_method: evt.paymentMethod.id },
+      // { handleActions: false }
+    )
+
+    console.dir(confirmIntent)
+
+    if (confirmIntent.error) {
+      console.error(confirmIntent.error)
+      evt.complete('fail')
+      $card.classList.add('is-error')
+      $message.innerText = confirmIntent.error
+    } else {
+      evt.complete('success')
+      // update default payment method
+      const updatedPayment = await _fetch(`/customer/${customerId}/set-default-payment-method`, 'PATCH', {
+        customerId,
+        paymentMethodId: evt.paymentMethod.id
+      })
+      showObj('Updated', updatedPayment)
+    }
+    showObj(confirmIntent)
+  })
 }
 
-function displayPaymentMethods (cards, defaultMethod, customer) {
-  const tpl = ({ id, billing_country, postal_code, brand, last4, exp_month, exp_year, isDefault }) => `
+function displayPaymentMethods (cards, customer) {
+  const tpl = ({ id, billing_country, postal_code, brand, last4, exp_month, exp_year, isDefault, wallet }) => `
   <div class="columns payment-method ${isDefault ? 'bg-secondary' : ''}" id="${id}">
 
     <div class="column col-12 label">Billing Country</div>
@@ -122,8 +172,10 @@ function displayPaymentMethods (cards, defaultMethod, customer) {
     </div>
 
     <div class="column col-12">
-      <span class="label">${id}</span>
+      <pre class="label text-small">${id}</pre>
       ${isDefault ? '<span class="label label-rounded label-primary float-right">Default</span>' : ''}
+      ${wallet.isApple ? '<img class="float-right mr-2" src="/imgs/apple-pay.svg" width="25px" />' : ''}
+      ${wallet.isGoogle ? '<img class="float-right mr-2" src="/imgs/google-pay.svg" width="25px" />' : ''}
     </div>
     <div class="column col-2">
       <span class="label label-secondary">${brand}</span>
@@ -151,13 +203,17 @@ function displayPaymentMethods (cards, defaultMethod, customer) {
 
   const cardsTpl = cards.map(card => tpl({
     id: card.id ?? '',
-    billing_country: customer.address.country ?? '',
+    billing_country: customer.address?.country ?? '',
     postal_code: card.billing_details.address.postal_code ?? '',
     brand: card.card.brand ?? '',
     last4: card.card.last4 ?? '',
     exp_month: card.card.exp_month ?? '',
     exp_year: card.card.exp_year ?? '',
-    isDefault: defaultMethod === card.id
+    isDefault: customer.invoice_settings.default_payment_method === card.id,
+    wallet: {
+      isApple: card.card.wallet?.type === 'apple_pay',
+      isGoogle: card.card.wallet?.type === 'google_pay'
+    }
   }))
   // remove existing btns
   let btnsUpdateCard = document.querySelectorAll('.btn-update-card')
@@ -206,7 +262,6 @@ async function updateCard (evt) {
   showLoading(this, false)
   logObj('Updated', payment)
   logObj('CustomerUpdated', customer)
-  await getCustomer.call(this)
   await getCustomerPaymentMethods.call(this)
 }
 
@@ -218,7 +273,6 @@ async function setDefaultCard (evt) {
   const response = await _fetch(`/customer/${customerId}/set-default-payment-method`, 'PATCH', { paymentMethodId })
   showLoading(this, false)
   logObj('Default', response)
-  await getCustomer.call(this)
   await getCustomerPaymentMethods.call(this)
 }
 
@@ -258,10 +312,9 @@ async function getCustomer() {
   const customerInput = document.getElementById('customer-js')
   const customer = await _fetch(`/customer/${customerInput.value}`)
 
-  window.defaultMethod = customer.invoice_settings.default_payment_method
-
   showLoading(this, false)
   logObj('Customer', customer)
+  showObj('Customer', customer)
 }
 const btnGetPaymentMethods = document.getElementById('btn-paymentMethods')
 btnGetPaymentMethods.addEventListener('click', getCustomerPaymentMethods)
@@ -274,10 +327,7 @@ async function getCustomerPaymentMethods() {
   const cards = await _fetch(`/customer/${customerInput.value}/payment-methods`)
   const customer = await _fetch(`/customer/${customerInput.value}`)
 
-  if (!window.defaultMethod) await getCustomer.call(this)
-  const paymentMethod = window.defaultMethod
-
-  displayPaymentMethods(cards.data, paymentMethod, customer)
+  displayPaymentMethods(cards.data, customer)
   showLoading(this, false)
   logObj('Cards', cards)
 }
@@ -291,13 +341,12 @@ async function getDefaultPaymentMethod () {
   showLoading(this, true)
   const customerInput = document.getElementById('customer-js')
 
-  if (!window.defaultMethod) await getCustomer.call(this)
-
-  const paymentMethod = window.defaultMethod
-
-  const cards = await _fetch(`/customer/${customerInput.value}/payment-methods/${paymentMethod}`)
   const customer = await _fetch(`/customer/${customerInput.value}`)
-  displayPaymentMethods([cards], paymentMethod, customer)
+  const defaultPaymentMethod = customer.invoice_settings.default_payment_method
+
+  const cards = await _fetch(`/customer/${customerInput.value}/payment-methods/${defaultPaymentMethod}`)
+
+  displayPaymentMethods([cards], customer)
   showLoading(this, false)
   logObj('Cards', cards)
 }
@@ -311,6 +360,8 @@ async function displayCheckoutOptions (card, subscription) {
       <label class="form-radio">
         <input type="radio" name="checkout" checked value="valid">
         <i class="form-icon"></i><span class="label label-secondary">${card.card.brand} *${card.card.last4} -- Expires in ${card.card.exp_month}/${card.card.exp_year}</span>
+        ${card.card.wallet?.type ===  'apple_pay' ? '<span class="float-right"><img src="/imgs/apple-pay.svg" width="25px" /></span>' : ''}
+        ${card.card.wallet?.type ===  'google_pay' ? '<span class="float-right"><img src="/imgs/google-pay.svg" width="25px" /></span>' : ''}
       </label>
     </div>
 

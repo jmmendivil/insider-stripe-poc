@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon -e js,hbs app.js & browser-sync start --port 9000 --proxy 'localhost:3000' --files 'public'"
+    "dev": "nodemon -e js,hbs app.js & browser-sync start --port 9000 --proxy 'localhost:3000' --files 'public' 'src'"
   },
   "keywords": [],
   "author": "Juan Mendivil",
