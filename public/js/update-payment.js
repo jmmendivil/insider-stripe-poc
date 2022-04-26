@@ -614,7 +614,7 @@ async function createNewUser() {
     logObj('Invoice', invoice)
     showLoading(this, false)
 
-    document.getElementById('checkout-message').innerHTML = `Subscription ${subscription.id} is created!`
+    document.getElementById('new-user-checkout-message').innerHTML = `Subscription ${subscription.id} is created!`
   }
 
   showLoading(this, false)
