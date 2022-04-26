@@ -34,12 +34,7 @@ app.get('/customer/:customerId/payment-methods/:paymentMethodId', async (req, re
 
 app.post('/customer/:customerId/add-payment-method', async (req, res) => {
   console.dir(req.body, { depth: null })
-  // Attach the payment method to the customer
   try {
-    await stripe.paymentMethods.attach(req.body.paymentMethodId, {
-      customer: req.body.customerId,
-    })
-
     // Change the default invoice settings on the customer to the new payment method
     const result = await stripe.customers.update(
       req.body.customerId,
@@ -74,14 +69,8 @@ app.patch('/customer/:customerId/update-payment-method/:id', async (req, res) =>
   const paymentMethod = {}
 
   const billing_details = {}
-  // if (req.body.name) billing_details.name = req.body.name
 
   const address = {}
-  // if (req.body.city) address.city = req.body.city
-  // if (req.body.country) address.country = req.body.country // ISO-3166-1
-  // if (req.body.state) address.state = req.body.state
-  // if (req.body.line1) address.line1 = req.body.line1
-  // if (req.body.line2) address.line2 = req.body.line2
   if (req.body.postal_code) address.postal_code = req.body.postal_code
 
   if (Object.keys(address).length > 0) billing_details.address = address

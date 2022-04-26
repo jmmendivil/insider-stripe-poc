@@ -26,6 +26,24 @@ function status (title, obj) {
   code.innerText = JSON.stringify(obj, null, 2)
   status.appendChild(code)
 }
+const styles = {
+  classes: { base: 'form-input' },
+  style: {
+    base: {
+      color: '#4d4d4d',
+      fontWeight: '500',
+      fontSize: '16px',
+      fontSmoothing: 'antialiased',
+      ':-webkit-autofill': {
+        color: '#fce883'
+      }
+    },
+    invalid: {
+      iconColor: '#EA0201',
+      color: '#EA0201'
+    }
+  }
+}
 // <<
 
 // -- Stripe
@@ -42,25 +60,6 @@ function registerElementEvents (stripeElement, container, message) {
   })
 }
 async function setupStripeElements (publicKey, setupIntent) {
-  const styles = {
-    classes: { base: 'form-input' },
-    style: {
-      base: {
-        color: '#4d4d4d',
-        fontWeight: '500',
-        fontSize: '16px',
-        fontSmoothing: 'antialiased',
-        ':-webkit-autofill': {
-          color: '#fce883'
-        }
-      },
-      invalid: {
-        iconColor: '#EA0201',
-        color: '#EA0201'
-      }
-    }
-  }
-
   const stripe = await Stripe(publicKey)
   const elements = stripe.elements()
   // const elements = stripe.elements({ clientSecret: setupIntent.client_secret })
@@ -84,7 +83,6 @@ async function setupStripeElements (publicKey, setupIntent) {
       payment_method: {
         card: cardElement,
         billing_details: {
-          name: 'Jon Doe',
           address: {
             postal_code: 90210
           }
@@ -164,15 +162,12 @@ async function setupStripeElements (publicKey, setupIntent) {
 }
 
 function displayPaymentMethods (cards, customer) {
-  const tpl = ({ id, billing_country, billing_postal_code, card_postal_code, brand, last4, exp_month, exp_year, isDefault, wallet }) => `
+  const tpl = ({ id, billing_country, postal_code, brand, last4, exp_month, exp_year, isDefault, wallet }) => `
   <div class="columns payment-method ${isDefault ? 'bg-secondary' : ''}" id="${id}">
 
-    <div class="column col-12 label">Billing Address</div>
+    <div class="column col-12 label">Billing Country</div>
     <div class="column col-4 form-group">
       <input class="form-input billing-country" type="text" placeholder="Country" value="${billing_country}">
-    </div>
-    <div class="column col-4 form-group">
-      <input class="form-input billing-postal-code" type="text" placeholder="Postal Code" value="${billing_postal_code}">
     </div>
 
     <div class="column col-12">
@@ -194,7 +189,7 @@ function displayPaymentMethods (cards, customer) {
       <input class="form-input exp-year" type="text" placeholder="Exp year" value="${exp_year}">
     </div>
     <div class="column col-2 form-group">
-      <input class="form-input card-postal-code" type="text" placeholder="Postal Code" value="${card_postal_code}">
+      <input class="form-input postal-code" type="text" placeholder="Postal Code" value="${postal_code}">
     </div>
     <div class="column col-6 form-group has-icon-right">
     ${!isDefault ? `<button class="btn btn-block btn-default-card">Set Default</button>` : ''}
@@ -207,9 +202,8 @@ function displayPaymentMethods (cards, customer) {
 
   const cardsTpl = cards.map(card => tpl({
     id: card.id ?? '',
-    billing_country: customer.address?.country ?? '',
-    billing_postal_code: customer.address?.postal_code ?? '',
-    card_postal_code: card.billing_details.address.postal_code ?? '',
+    billing_country: customer.address.country ?? '',
+    postal_code: card.billing_details.address.postal_code ?? '',
     brand: card.card.brand ?? '',
     last4: card.card.last4 ?? '',
     exp_month: card.card.exp_month ?? '',
@@ -251,24 +245,15 @@ async function updateCard (evt) {
   const customerId = document.getElementById('customer-js').value
   let customer = await _fetch(`/customer/${customerId}`)
 
-  // send both existing address + new address
   const newAddress = {
-    line1: customer.address.line1,
-    city: customer.address.city,
-    state: customer.address.state,
     country: container.querySelector('.billing-country').value,
-    postal_code: container.querySelector('.billing-postal-code').value
+    postal_code: container.querySelector('.postal-code').value
   }
-  //send only available fields
-  // const newAddress = {
-  //   country: container.querySelector('.billing-country').value,
-  //   postal_code: container.querySelector('.billing-postal-code').value
-  // }
 
   customer = await _fetch(`/customer/${customerId}/update-billing-address`, 'PATCH', newAddress)
 
   const payment = await _fetch(`/customer/${customerId}/update-payment-method/${id}`, 'PATCH', {
-    postal_code: container.querySelector('.card-postal-code').value,
+    postal_code: container.querySelector('.postal-code').value,
     exp_month: container.querySelector('.exp-month').value,
     exp_year: container.querySelector('.exp-year').value,
   })
@@ -472,7 +457,73 @@ async function confirmCheckout () {
   document.getElementById('checkout-message').classList.remove('d-none')
   document.getElementById('checkout-payment-option').classList.add('d-none')
 }
-
 async function addNewCard () {
-  console.log('PlaceHolder for add card checkout experience')
+  document.getElementById('checkout-payment-option').classList.add('d-none')
+  document.querySelector('.checkout-form').classList.remove('d-none')
+  document.querySelector('.checkout-form-btn').classList.remove('d-none')
+
+  subscription = window.subscription
+  const PM_SECRET = subscription.latest_invoice.payment_intent.client_secret
+
+  async function setupNewStripeElements (publicKey) {
+    const stripe = await Stripe(publicKey)
+    const elements = stripe.elements({ clientSecret: PM_SECRET })
+
+    const $card = document.querySelector('#new-card-sjs')
+    const $message = document.querySelector('.new-input-message-js')
+
+    const cardElement = elements.create('card', styles)
+    cardElement.mount($card)
+    registerElementEvents(cardElement, $card, $message)
+
+    // - Submit
+    document.getElementById('new-add-card-js').classList.remove('d-none') // show update btn
+    const btnSubmit = document.getElementById('new-btn-add-js')
+    btnSubmit.addEventListener('click', submitCard)
+    async function submitCard () {
+      showLoading(this, true)
+
+      const confirmIntent = await stripe.confirmCardPayment(PM_SECRET, {
+        payment_method: {
+          card: cardElement
+        },
+        setup_future_usage: 'off_session'
+      })
+
+      if (confirmIntent.error) {
+        console.error(confirmIntent.error)
+        $card.classList.add('is-error')
+        $message.innerText = confirmIntent.error.message
+        showLoading(this, false)
+        return
+      }
+
+      let resultMessage = `Succeed. Subscription ${subscription.id} is active!`
+      document.getElementById('checkout-message').innerHTML = `<div>${resultMessage}</div>`
+
+      logObj('Confirm setup', confirmIntent.paymentIntent)
+
+      const customerId = document.getElementById('customer-js').value
+      const setDefaultPayment = await _fetch(`/customer/${customerId}/set-default-payment-method`, 'PATCH', {
+        paymentMethodId: confirmIntent.paymentIntent.payment_method
+      })
+      logObj('Update', setDefaultPayment)
+      showLoading(this, false)
+
+      subscription = await _fetch(`/subscriptions/${subscription.id}`)
+
+      showLoading(this, false)
+      logObj('Subscription', subscription)
+
+      document.getElementById('checkout-message').classList.remove('d-none')
+      document.querySelector('.checkout-form').classList.add('d-none')
+      document.querySelector('.checkout-form-btn').classList.add('d-none')
+    }
+  }
+
+  showLoading(this, true)
+  const { publicKey } = await _fetch('/public-key', 'GET')
+
+  setupNewStripeElements(publicKey)
+  showLoading(this, false)
 }
