@@ -613,6 +613,8 @@ async function createNewUser() {
     logObj('Subscription', subscription)
     logObj('Invoice', invoice)
     showLoading(this, false)
+
+    document.getElementById('checkout-message').innerHTML = `Subscription ${subscription.id} is created!`
   }
 
   showLoading(this, false)
