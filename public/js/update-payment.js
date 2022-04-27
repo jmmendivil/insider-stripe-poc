@@ -36,16 +36,13 @@ function registerElementEvents (stripeElement, container, message) {
       message.innerText = event.error.message
     } else {
       container.classList.contains('is-error') &&
-        container.classList.remove('is-error')
+      container.classList.remove('is-error')
       message.innerText = null
     }
   })
 }
 
-async function setupStripePaymentElements (elements) {
-  const $card = document.querySelector('#card-sjs')
-  const $message = document.querySelector('.input-message-js')
-
+async function setupStripePaymentElements (elements, $card, $message) {
   document.querySelector('.billing-details').classList.remove('d-none')
 
   // --- Card Element
@@ -77,7 +74,10 @@ async function setupSavedCard (publicKey, setupIntent) {
   const stripe = await Stripe(publicKey)
   const elements = stripe.elements({ clientSecret: setupIntent.client_secret })
 
-  await setupStripePaymentElements(elements)
+  const $card = document.querySelector('#card-sjs')
+  const $message = document.querySelector('.input-message-js')
+
+  await setupStripePaymentElements(elements, $card, $message)
 
   // - Submit
   document.getElementById('add-card-js').classList.remove('d-none') // show update btn
@@ -120,11 +120,9 @@ async function setupSavedCard (publicKey, setupIntent) {
 
     logObj('Confirm setup', confirmIntent.setupIntent)
 
-    const addPayment = await _fetch(`/customer/${customerId}/add-payment-method`, 'POST', {
-      customerId,
-      paymentMethodId: confirmIntent.setupIntent.payment_method
-    })
-    logObj('Update', addPayment)
+    const setDefaultPayment = await _fetch(`/customer/${customerId}/set-default-payment-method`, 'PATCH', { paymentMethodId: confirmIntent.setupIntent.payment_method })
+
+    logObj('Update', setDefaultPayment)
     showLoading(this, false)
   }
 }
@@ -443,7 +441,7 @@ async function addNewCard () {
     const $card = document.querySelector('#card-sjs')
     const $message = document.querySelector('.input-message-js')
 
-    await setupStripePaymentElements(elements)
+    await setupStripePaymentElements(elements, $card, $message)
 
     // - Submit
     const btnSubmit = document.getElementById('pay-btn-js')
@@ -557,7 +555,10 @@ async function createNewUser() {
   const stripe = await Stripe(publicKey)
   const elements = stripe.elements({ clientSecret: setupIntent.client_secret })
 
-  await setupStripePaymentElements(elements)
+  const $card = document.querySelector('#card-sjs')
+  const $message = document.querySelector('.input-message-js')
+
+  await setupStripePaymentElements(elements, $card, $message)
 
   // - Submit
   document.getElementById('add-card-js').classList.add('d-none')
