@@ -16,6 +16,10 @@ app.get('/', (req, res) => res.render('index.hbs'))
 app.get('/google-apple', (req, res) => res.render('google-apple.hbs'))
 
 // - Customer
+app.post('/customers', async (req, res) => {
+  res.send(await stripe.customers.create(req.body))
+})
+
 app.get('/customer/:customerId', async (req, res) => {
   const { customerId } = req.params
   res.send(await stripe.customers.retrieve(customerId))
@@ -37,7 +41,7 @@ app.post('/customer/:customerId/add-payment-method', async (req, res) => {
   try {
     // Change the default invoice settings on the customer to the new payment method
     const result = await stripe.customers.update(
-      req.body.customerId,
+      req.params.customerId,
       {
         invoice_settings: {
           default_payment_method: req.body.paymentMethodId,
@@ -123,8 +127,7 @@ app.post('/create-payment-intent', async (req, res) => {
     amount: req.body.amount,
     currency: req.body.currency,
     confirm: true,
-    payment_method: req.body.paymentMethodId
-    // usage: 'off_session',
+    usage: 'off_session',
     // metadata: {
       // customer_id: req.body.customerId,
       // subscription_id: req.body.subscriptionId,
@@ -138,9 +141,34 @@ app.post('/customers/:customerId/create-subscriptions', async (req, res) => {
     customer: req.params.customerId,
     items: [{ price: req.body.priceId }],
     payment_behavior: 'default_incomplete',
-    // automatic_tax: { enabled: true },
+    automatic_tax: { enabled: true },
     expand: ['latest_invoice.payment_intent']
   }))
+})
+
+// - Create a subscription schedule
+app.post('/customers/:customerId/create-subscription-schedules', async (req, res) => {
+  res.send(await stripe.subscriptionSchedules.create({
+    customer: req.params.customerId,
+    start_date: 'now',
+    end_behavior: 'release',
+    default_settings: {
+      automatic_tax: {
+        enabled: true
+      }
+    },
+    phases: [
+      {
+        items: [{ price: req.body.priceId }],
+        iterations: 1
+      }
+    ]
+  }))
+})
+
+// - Pay invoice
+app.post('/pay-invoice', async (req, res) => {
+  res.send(await stripe.invoices.pay(req.body.invoiceId))
 })
 
 // - Get public key

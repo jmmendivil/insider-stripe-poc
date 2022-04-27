@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -27,12 +26,12 @@
 
             <div class="form-group">
               <input
-                  class="form-input"
-                  type="text"
-                  id="subs-js"
-                  placeholder="Subscription"
-                  value="sub_1Kr78NEv92Ty3pFAPJaOtDr7"
-                  />
+                class="form-input"
+                type="text"
+                id="subs-js"
+                placeholder="Subscription"
+                value="sub_1Kr78NEv92Ty3pFAPJaOtDr7"
+              />
             </div>
             <div class="form-group">
               <button id="btn-subs" class="btn">Subscription</button>
@@ -43,12 +42,12 @@
 
           <div class="form-group">
             <input
-                class="form-input"
-                type="text"
-                id="customer-js"
-                placeholder="Client ID"
-                value="cus_LVfuhzt4MXaXKm"
-                />
+              class="form-input"
+              type="text"
+              id="customer-js"
+              placeholder="Client ID"
+              value="cus_La829fgZlb9VAT"
+            />
           </div>
           <div class="form-group">
             <button id="btn-customer" class="btn">Customer</button>
@@ -99,13 +98,49 @@
           <div id="payment-methods"></div>
           <div id="checkout-payment-option"></div>
           <div id="checkout-message"></div>
+
+          <div id="new-user-checkout-container" class="d-none">
+            <div class="form-group">
+              <input
+                class="form-input"
+                type="text"
+                id="new-customer-js"
+                placeholder="email"
+                value=""
+              />
+            </div>
+
+            <div id="add-user-js" class="form-group">
+              <button id="btn-user-js" class="btn btn-primary">Create User</button>
+            </div>
+
+            <div class="form-group new-checkout-form d-none">
+              <div id="new-payment-request-js"></div>
+              <div id="new-user-card-sjs"></div>
+              <p class="new-user-input-message-js form-input-hint"></p>
+            </div>
+
+            <div
+              id="new-user-add-card-js"
+              class="form-group d-none new-checkout-form-btn"
+            >
+              <button
+                id="new-user-btn-add-js"
+                class="btn btn-primary"
+              >Pay</button>
+            </div>
+
+          </div>
+
+          <div id="new-user-checkout-message"></div>
+
+          <div class="columns">
+            <pre class="code" id="console"></pre>
+          </div>
+
         </div>
-      </div>
 
-      <div class="columns">
-        <pre class="code" id="console"></pre>
       </div>
-
     </div>
 
     <script src="/js/update-payment.js"></script>

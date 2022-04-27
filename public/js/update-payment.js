@@ -527,3 +527,164 @@ async function addNewCard () {
   setupNewStripeElements(publicKey)
   showLoading(this, false)
 }
+
+
+//---------------------------------------------------------
+// new user flow
+const btnNewUser = document.getElementById('btn-new-checkout')
+btnNewUser.addEventListener('click', newCheckout)
+async function newCheckout() {
+  document.getElementById('new-user-checkout-container').classList.remove('d-none')
+  const btnNewUser = document.getElementById('btn-user-js')
+  btnNewUser.addEventListener('click', createNewUser)
+}
+
+async function createNewUser() {
+  showLoading(this, true)
+  document.getElementById('add-user-js').classList.remove('d-none')
+
+  const customerInput = document.getElementById('new-customer-js')
+  const customer = await _fetch(`/customers`, 'POST', {
+    email: customerInput.value,
+    address: {
+      country: 'US',
+      postal_code: 77407
+    }
+  })
+
+  const setupIntent = await _fetch('/create-setup-intent', 'POST', { customerId: customer.id })
+  logObj('Intent', setupIntent)
+
+  document.querySelector('.new-checkout-form').classList.remove('d-none')
+  document.querySelector('.new-checkout-form-btn').classList.remove('d-none')
+
+  const { publicKey } = await _fetch('/public-key', 'GET')
+
+  const stripe = await Stripe(publicKey)
+  const elements = stripe.elements({ clientSecret: setupIntent.client_secret })
+
+  const $card = document.querySelector('#new-user-card-sjs')
+  const $message = document.querySelector('.new-user-input-message-js')
+
+  const cardElement = elements.create('card', styles)
+  cardElement.mount($card)
+  registerElementEvents(cardElement, $card, $message)
+
+  // - Submit
+  document.getElementById('new-user-add-card-js').classList.remove('d-none') // show update btn
+  const btnSubmit = document.getElementById('new-user-btn-add-js')
+  btnSubmit.addEventListener('click', submitCard)
+  async function submitCard () {
+    showLoading(this, true)
+
+    const confirmIntent = await stripe.confirmCardSetup(setupIntent.client_secret, {
+      payment_method: {
+        card: cardElement
+      }
+    })
+
+    logObj('Confirm Intent', confirmIntent)
+
+    if (confirmIntent.error) {
+      console.error(confirmIntent.error)
+      $card.classList.add('is-error')
+      $message.innerText = confirmIntent.error.message
+      showLoading(this, false)
+      return
+    }
+
+    const setDefaultPayment = await _fetch(`/customer/${customer.id}/add-payment-method`, 'POST', {
+      paymentMethodId: confirmIntent.setupIntent.payment_method
+    })
+    logObj('Update', setDefaultPayment)
+
+    const subscriptionSchedule = await _fetch(`/customers/${customer.id}/create-subscription-schedules`, 'POST', {
+      priceId: 'price_1KlaEPEv92Ty3pFACO4AZb9K'
+    })
+    logObj('Subscription Schedule', subscriptionSchedule)
+
+    const subscription = await _fetch(`/subscriptions/${subscriptionSchedule.subscription}`)
+    logObj('Subscription', subscription)
+
+
+    const invoice = await _fetch(`/pay-invoice`, 'POST', {
+      invoiceId: subscription.latest_invoice.id
+    })
+    logObj('Invoice', invoice)
+
+    showLoading(this, false)
+
+    document.getElementById('new-user-checkout-message').innerHTML = `Subscription ${subscription.id} is created!`
+  }
+
+  // --- PaymentRequest Button
+  const paymentRequest = stripe.paymentRequest({
+    country: 'US',
+    currency: 'mxn',
+    // currency: 'usd',
+    total: {
+      label: 'Add new card',
+      amount: 0,
+    },
+    requestPayerName: true,
+    requestPayerEmail: true,
+  })
+
+  // apple/google pay
+  const $paymentRequest = document.querySelector('#new-payment-request-js')
+  const canUsePaymentRequest = await paymentRequest.canMakePayment()
+  if (canUsePaymentRequest) {
+    const prButton = elements.create('paymentRequestButton', { paymentRequest })
+    prButton.mount($paymentRequest)
+  } else {
+    console.error('Can not load payment request', canUsePaymentRequest)
+    $paymentRequest.classList.add('form-input-hint')
+    $paymentRequest.innerHTML = 'No wallet with supported networks detected :c'
+  }
+
+  paymentRequest.on('paymentmethod', async (evt) => {
+    console.dir(evt)
+    const confirmIntent = await stripe.confirmCardSetup(setupIntent.client_secret,
+      { payment_method: evt.paymentMethod.id },
+      // { handleActions: false }
+    )
+
+    console.dir(confirmIntent)
+
+    if (confirmIntent.error) {
+      console.error(confirmIntent.error)
+      evt.complete('fail')
+      $card.classList.add('is-error')
+      $message.innerText = confirmIntent.error
+    } else {
+      evt.complete('success')
+      // update default payment method
+      const updatedPayment = await _fetch(`/customer/${customer.id}/set-default-payment-method`, 'PATCH', {
+        paymentMethodId: evt.paymentMethod.id
+      })
+      showObj('Updated', updatedPayment)
+
+      const subscriptionSchedule = await _fetch(`/customers/${customer.id}/create-subscription-schedules`, 'POST', {
+        priceId: 'price_1KlaEPEv92Ty3pFACO4AZb9K'
+      })
+      logObj('Subscription Schedule', subscriptionSchedule)
+
+      const subscription = await _fetch(`/subscriptions/${subscriptionSchedule.subscription}`)
+      logObj('Subscription', subscription)
+
+
+      const invoice = await _fetch(`/pay-invoice`, 'POST', {
+        invoiceId: subscription.latest_invoice.id
+      })
+      logObj('Invoice', invoice)
+
+      showLoading(this, false)
+
+      document.getElementById('new-user-checkout-message').innerHTML = `Subscription ${subscription.id} is created!`
+    }
+    showObj(confirmIntent)
+  })
+
+  showLoading(this, false)
+  logObj('Customer', customer)
+}

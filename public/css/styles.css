@@ -12,12 +12,14 @@ pre:first-child {
   padding: 0.4rem 0;
 }
 
-#payment-request-js {
+#payment-request-js,
+#new-payment-request-js {
   margin-bottom: 0.3rem;
 }
-#payment-request-js:not(:empty)::after {
+#payment-request-js:not(:empty)::after,
+#new-payment-request-js:not(:empty)::after {
   color: #bcc3ce;
-  content: '-or-';
+  content: "-or-";
   text-align: center;
   display: block;
   font-size: 12px;
