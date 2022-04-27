@@ -141,7 +141,7 @@ app.post('/customers/:customerId/create-subscriptions', async (req, res) => {
     customer: req.params.customerId,
     items: [{ price: req.body.priceId }],
     payment_behavior: 'default_incomplete',
-    // automatic_tax: { enabled: true },
+    automatic_tax: { enabled: true },
     expand: ['latest_invoice.payment_intent']
   }))
 })
@@ -152,6 +152,11 @@ app.post('/customers/:customerId/create-subscription-schedules', async (req, res
     customer: req.params.customerId,
     start_date: 'now',
     end_behavior: 'release',
+    default_settings: {
+      automatic_tax: {
+        enabled: true
+      }
+    },
     phases: [
       {
         items: [{ price: req.body.priceId }],
