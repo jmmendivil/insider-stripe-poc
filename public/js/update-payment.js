@@ -352,10 +352,9 @@ async function getDefaultPaymentMethod () {
 }
 
 // - Checkout
-async function displayCheckoutOptions (card, subscription) {
+async function displayCheckoutOptions (card) {
   const tpl = `
   <div class="columns">
-    <div class="column col-12 label">${subscription.id} is created</div>
     <div class="column col-12 form-group">
       <label class="form-radio">
         <input type="radio" name="checkout" checked value="valid">
@@ -408,18 +407,14 @@ async function getCheckout() {
   const customer = await _fetch(`/customer/${customerInput.value}`)
   const paymentMethodId = customer.invoice_settings.default_payment_method
   const card = await _fetch(`/customer/${customerInput.value}/payment-methods/${paymentMethodId}`)
-  const subscription = await _fetch(`/customers/${customerInput.value}/create-subscriptions`, 'POST', {
-    priceId: 'price_1KlaEPEv92Ty3pFACO4AZb9K'
-  })
-  window.subscription = subscription
-  displayCheckoutOptions(card, subscription)
+
+  displayCheckoutOptions(card)
 
   showLoading(this, false)
   document.getElementById('checkout-payment-option').classList.remove('d-none')
 
   logObj('Customer', customer)
   logObj('Card', card)
-  logObj('Subscription', subscription)
 }
 
 // charge subscription with existing payment method
@@ -430,8 +425,11 @@ async function confirmCheckout () {
   showLoading(this, true)
 
   const customerInput = document.getElementById('customer-js')
-  let subscription = window.subscription
   const customer = await _fetch(`/customer/${customerInput.value}`)
+
+  let subscription = await _fetch(`/customers/${customer.id}/create-subscriptions`, 'POST', {
+    priceId: 'price_1KlaEPEv92Ty3pFACO4AZb9K'
+  })
 
   const { publicKey } = await _fetch('/public-key', 'GET')
   const stripe = await Stripe(publicKey)
@@ -457,17 +455,24 @@ async function confirmCheckout () {
   document.getElementById('checkout-message').classList.remove('d-none')
   document.getElementById('checkout-payment-option').classList.add('d-none')
 }
+
+// when user add a new card on checkout instead of using existing payment method
 async function addNewCard () {
   document.getElementById('checkout-payment-option').classList.add('d-none')
   document.querySelector('.checkout-form').classList.remove('d-none')
   document.querySelector('.checkout-form-btn').classList.remove('d-none')
 
-  subscription = window.subscription
-  const PM_SECRET = subscription.latest_invoice.payment_intent.client_secret
+  const customerId = document.getElementById('customer-js').value
+  const setupIntent = await _fetch('/create-setup-intent', 'POST', { customerId })
+
+  // subscription = window.subscription
+  // const PM_SECRET = subscription.latest_invoice.payment_intent.client_secret
 
   async function setupNewStripeElements (publicKey) {
     const stripe = await Stripe(publicKey)
-    const elements = stripe.elements({ clientSecret: PM_SECRET })
+    // const elements = stripe.elements({ clientSecret: PM_SECRET })
+
+    const elements = stripe.elements()
 
     const $card = document.querySelector('#new-card-sjs')
     const $message = document.querySelector('.new-input-message-js')
@@ -483,11 +488,17 @@ async function addNewCard () {
     async function submitCard () {
       showLoading(this, true)
 
-      const confirmIntent = await stripe.confirmCardPayment(PM_SECRET, {
+      // const confirmIntent = await stripe.confirmCardPayment(PM_SECRET, {
+      //   payment_method: {
+      //     card: cardElement
+      //   },
+      //   setup_future_usage: 'off_session'
+      // })
+
+      const confirmIntent = await stripe.confirmCardSetup(setupIntent.client_secret, {
         payment_method: {
           card: cardElement
-        },
-        setup_future_usage: 'off_session'
+        }
       })
 
       if (confirmIntent.error) {
@@ -498,22 +509,27 @@ async function addNewCard () {
         return
       }
 
-      let resultMessage = `Succeed. Subscription ${subscription.id} is active!`
-      document.getElementById('checkout-message').innerHTML = `<div>${resultMessage}</div>`
 
-      logObj('Confirm setup', confirmIntent.paymentIntent)
+      logObj('Confirm setup', confirmIntent.setupIntent)
 
-      const customerId = document.getElementById('customer-js').value
-      const setDefaultPayment = await _fetch(`/customer/${customerId}/set-default-payment-method`, 'PATCH', {
-        paymentMethodId: confirmIntent.paymentIntent.payment_method
+      const setDefaultPayment = await _fetch(`/customer/${customerId}/add-payment-method`, 'POST', {
+        paymentMethodId: confirmIntent.setupIntent.payment_method
       })
       logObj('Update', setDefaultPayment)
-      showLoading(this, false)
 
-      subscription = await _fetch(`/subscriptions/${subscription.id}`)
+      const subscriptionSchedule = await _fetch(`/customers/${customerId}/create-subscription-schedules`, 'POST', {
+        priceId: 'price_1KlaEPEv92Ty3pFACO4AZb9K'
+      })
+      logObj('Subscription Schedule', subscriptionSchedule)
+
+      const subscription = await _fetch(`/subscriptions/${subscriptionSchedule.subscription}`)
+
 
       showLoading(this, false)
       logObj('Subscription', subscription)
+
+      let resultMessage = `Succeed. Subscription ${subscription.id} is active!`
+      document.getElementById('checkout-message').innerHTML = `<div>${resultMessage}</div>`
 
       document.getElementById('checkout-message').classList.remove('d-none')
       document.querySelector('.checkout-form').classList.add('d-none')
