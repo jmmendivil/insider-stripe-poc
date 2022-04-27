@@ -155,8 +155,7 @@ app.post('/customers/:customerId/create-subscription-schedules', async (req, res
     phases: [
       {
         items: [{ price: req.body.priceId }],
-        iterations: 1,
-        collection_method: 'charge_automatically'
+        iterations: 1
       }
     ]
   }))
