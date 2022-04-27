@@ -548,7 +548,7 @@ async function createNewUser() {
     email: customerInput.value,
     address: {
       country: 'US',
-      postal_code: 10006
+      postal_code: 77407
     }
   })
 
