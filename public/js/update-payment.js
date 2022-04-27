@@ -148,32 +148,34 @@ function displayPaymentMethods (cards, customer) {
   const tpl = ({ id, billing_country, postal_code, brand, last4, exp_month, exp_year, isDefault, wallet }) => `
   <div class="columns payment-method ${isDefault ? 'bg-secondary' : ''}" id="${id}">
 
-    <div class="column col-12 label">Billing Country</div>
-    <div class="column col-4 form-group">
-      <input class="form-input billing-country" type="text" placeholder="Country" value="${billing_country}">
-    </div>
 
-    <div class="column col-12">
+  <div class="column col-12">
       <pre class="label text-small">${id}</pre>
       ${isDefault ? '<span class="label label-rounded label-primary float-right">Default</span>' : ''}
       ${wallet.isApple ? '<img class="float-right mr-2" src="/imgs/apple-pay.svg" width="25px" />' : ''}
       ${wallet.isGoogle ? '<img class="float-right mr-2" src="/imgs/google-pay.svg" width="25px" />' : ''}
     </div>
     <div class="column col-2">
-      <span class="label label-secondary">${brand}</span>
+    <span class="label label-secondary">${brand}</span>
     </div>
     <div class="column col-4 form-group">
       <input class="form-input card disabled" type="text" placeholder="Card" value="************${last4}">
-    </div>
-    <div class="column col-2 form-group">
+      </div>
+      <div class="column col-2 form-group">
       <input class="form-input exp-month" type="text" placeholder="Exp month" value="${exp_month}">
     </div>
     <div class="column col-2 form-group">
       <input class="form-input exp-year" type="text" placeholder="Exp year" value="${exp_year}">
     </div>
-    <div class="column col-2 form-group">
+
+    <div class="column col-12 label">Billing Details</div>
+    <div class="column col-6 form-group">
+      <input class="form-input billing-country" type="text" placeholder="Country" value="${billing_country}">
+    </div>
+    <div class="column col-6 form-group">
       <input class="form-input postal-code" type="text" placeholder="Postal Code" value="${postal_code}">
     </div>
+
     <div class="column col-6 form-group has-icon-right">
     ${!isDefault ? `<button class="btn btn-block btn-default-card">Set Default</button>` : ''}
     </div>
@@ -185,7 +187,7 @@ function displayPaymentMethods (cards, customer) {
 
   const cardsTpl = cards.map(card => tpl({
     id: card.id ?? '',
-    billing_country: customer.address?.country ?? '',
+    billing_country: card.billing_details.address?.country ?? '',
     postal_code: card.billing_details.address.postal_code ?? '',
     brand: card.card.brand ?? '',
     last4: card.card.last4 ?? '',
