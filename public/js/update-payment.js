@@ -524,6 +524,11 @@ async function addNewCard () {
 
       const subscription = await _fetch(`/subscriptions/${subscriptionSchedule.subscription}`)
 
+      const invoice = await _fetch(`/pay-invoice`, 'POST', {
+        invoiceId: subscription.latest_invoice.id
+      })
+      logObj('Invoice', invoice)
+
 
       showLoading(this, false)
       logObj('Subscription', subscription)
