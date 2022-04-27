@@ -12,9 +12,6 @@ app.use(bodyParser.json())
 app.set('views', path.join(__dirname, 'src/views'))
 app.set('view engine', 'hbs')
 
-app.get('/', (req, res) => res.render('index.hbs'))
-app.get('/google-apple', (req, res) => res.render('google-apple.hbs'))
-
 // - Customer
 app.post('/customers', async (req, res) => {
   res.send(await stripe.customers.create(req.body))

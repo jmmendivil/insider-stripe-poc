@@ -12,15 +12,23 @@
       rel="stylesheet"
       href="https://unpkg.com/spectre.css/dist/spectre-icons.min.css"
     />
-    <link rel="stylesheet" href="/css/styles.css" />
+    <link rel="stylesheet" href="css/styles.css" />
   </head>
   <body>
 
     <div class="container grid-md">
       <div class="columns">
 
-        {{!  Subscription  }}
+
+        <!-- {{!  Subscription  }} -->
         <div class="column col-sm-12">
+
+          <div class="form-group">
+            <label class="form-switch">
+              <input id="web-console" type="checkbox">
+              <i class="form-icon"></i> Console
+            </label>
+          </div>
 
           <div class="form-js form-group">
 
@@ -75,7 +83,7 @@
           </div>
         </div>
 
-        {{!  Customer  }}
+        <!-- {{!  Customer  }} -->
         <div class="column col-sm-12">
 
           <div class="form-group">
@@ -136,15 +144,16 @@
 
           <div id="new-user-checkout-message"></div>
 
-          <div class="columns">
-            <pre class="code" id="console"></pre>
-          </div>
 
         </div>
 
+
+      </div>
+      <div class="columns">
+        <pre class="code" id="console"></pre>
       </div>
     </div>
 
-    <script src="/js/update-payment.js"></script>
+    <script type="module" src="js/update-payment.js"></script>
   </body>
 </html>
