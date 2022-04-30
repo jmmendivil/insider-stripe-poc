@@ -55,20 +55,13 @@ function displayCheckoutOptions (card) {
   </div>
 `
 
-  // remove existing btns
-  let btnConfirm = document.getElementById('btn-pay-confirm')
-  if (btnConfirm) btnConfirm.removeEventListener('click', confirmCheckout)
-  let btnPayNewCard = document.getElementById('btn-createnpay-new-card')
-  if (btnPayNewCard) btnPayNewCard.removeEventListener('click', addNewCard)
+  showById('checkout-payment-option', tpl)
 
-  const checkoutOptions = document.getElementById('checkout-payment-option')
-  checkoutOptions.innerHTML = tpl
-
-  // add new btns
-  btnConfirm = document.getElementById('btn-pay-confirm')
-  if (btnConfirm) btnConfirm.addEventListener('click', confirmCheckout)
-  btnPayNewCard = document.getElementById('btn-createnpay-new-card')
-  if (btnPayNewCard) btnPayNewCard.addEventListener('click', addNewCard)
+  // add click to new btns
+  const btnConfirm = document.getElementById('btn-pay-confirm')
+  btnConfirm.addEventListener('click', confirmCheckout)
+  const btnPayNewCard = document.getElementById('btn-createnpay-new-card')
+  btnPayNewCard.addEventListener('click', addNewCard)
 }
 
 async function confirmCheckout () {

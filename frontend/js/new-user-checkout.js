@@ -81,7 +81,6 @@ export default async function newUserCheckout() {
     const subscription = await _fetch(`/subscriptions/${subscriptionSchedule.subscription}`)
     logObj('Subscription', subscription)
 
-
     const invoice = await _fetch(`/pay-invoice`, 'POST', {
       invoiceId: subscription.latest_invoice.id
     })

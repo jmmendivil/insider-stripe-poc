@@ -80,27 +80,15 @@ function displayPaymentMethods (cards, customer) {
     }
   }))
 
-  showById('payment-methods')
+  showById('payment-methods', cardsTpl.join(''))
 
-  // remove existing btns
-  let btnsUpdateCard = document.querySelectorAll('.btn-update-card')
-  if (btnsUpdateCard.length > 0) btnsUpdateCard.forEach(btn => {
-    btn.removeEventListener('click', updateCard)
-  })
-  let btnsDefaultCard = document.querySelectorAll('.btn-default-card')
-  if (btnsDefaultCard.length > 0) btnsDefaultCard.forEach(btn => {
-    btn.removeEventListener('click', setDefaultCard)
-  })
-
-  document.getElementById('payment-methods').innerHTML = cardsTpl.join('')
-
-  // add new btns
-  btnsUpdateCard = document.querySelectorAll('.btn-update-card')
+  // add click to new btns
+  const btnsUpdateCard = document.querySelectorAll('.btn-update-card')
   btnsUpdateCard.forEach(btn => {
     btn.addEventListener('click', updateCard)
   })
-  // add new btns
-  btnsDefaultCard = document.querySelectorAll('.btn-default-card')
+  // add click to new btns
+  const btnsDefaultCard = document.querySelectorAll('.btn-default-card')
   btnsDefaultCard.forEach(btn => {
     btn.addEventListener('click', setDefaultCard)
   })
