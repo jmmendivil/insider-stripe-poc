@@ -6,7 +6,7 @@ import { existingUserAllPaymentMethods, existingUserDefaultPaymentMethod } from 
 import newUserCheckout from './new-user-checkout'
 
 window.webConsole = false
-const checkWebConsole = document.getElementById('web-console')
+const checkWebConsole = document.getElementById('checkbox-web-console')
 checkWebConsole.addEventListener('click', function (evt) { window.webConsole = evt.target.checked })
 
 
