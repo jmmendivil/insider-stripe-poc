@@ -1,5 +1,6 @@
 require('dotenv').config()
 const express = require('express')
+const cors = require('cors')
 const bodyParser = require('body-parser')
 const path = require('path')
 const app = express()
@@ -8,6 +9,7 @@ const stripe = require('stripe')(process.env.STRIPE_SK_KEY)
 
 app.use(express.static('public'))
 app.use(bodyParser.json())
+app.use(cors())
 
 app.set('views', path.join(__dirname, 'src/views'))
 app.set('view engine', 'hbs')
@@ -171,6 +173,14 @@ app.post('/pay-invoice', async (req, res) => {
 // - Get public key
 app.get('/public-key', (req, res) => {
   res.send({ publicKey: process.env.STRIPE_PK_KEY })
+})
+
+app.post('/upcoming-invoice', async (req, res) => {
+  res.send(await stripe.invoices.retrieveUpcoming({
+    customer_details: req.body.customer_details,
+    subscription_items: req.body.subscription_items,
+    automatic_tax: req.body.automatic_tax
+  }))
 })
 
 app.listen(process.env.HTTP_PORT, () => {

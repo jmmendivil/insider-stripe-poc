@@ -18,7 +18,7 @@ pre:first-child {
 }
 #payment-request-js:not(:empty)::after,
 #new-payment-request-js:not(:empty)::after {
-  color: #bcc3ce;
+  color: darkgray;
   content: "-or-";
   text-align: center;
   display: block;

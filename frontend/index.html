@@ -36,7 +36,7 @@
               <input
                 class="form-input"
                 type="text"
-                id="subs-js"
+                id="subs-input"
                 placeholder="Subscription"
                 value="sub_1Kr78NEv92Ty3pFAPJaOtDr7"
               />
@@ -52,23 +52,17 @@
             <input
               class="form-input"
               type="text"
-              id="customer-js"
+              id="customer-input"
               placeholder="Client ID"
-              value="cus_LaTdcDFEyU4xZt"
+              value="cus_LajwRyb6GoquvF"
             />
           </div>
-          <div class="form-group">
+          <div class="btn-group btn-group-block">
             <button id="btn-customer" class="btn">Customer</button>
-            <button id="btn-paymentMethods" class="btn">List payment methods</button>
-            <button id="btn-default-payment-method" class="btn">Only default</button>
+            <button id="btn-list-payment-methods" class="btn">List payment methods</button>
+            <button id="btn-default-payment-method" class="btn">Default payment</button>
+            <button id="btn-add-payment" class="btn">Add payment method</button>
           </div>
-          <div class="bar bar-sm"></div>
-
-          <div class="form-group">
-            <label>Add payment method:</label>
-            <button id="btn-element" class="btn btn-link">Create Element</button>
-          </div>
-
           <div class="bar bar-sm"></div>
 
           <div class="form-group">
@@ -87,38 +81,42 @@
         <div class="column col-sm-12">
 
           <div class="form-group">
-            <div id="payment-request-js"></div>
-            <div id="card-sjs"></div>
-            <p class="input-message-js form-input-hint"></p>
+            <div id="stripe-payment-element"></div>
 
-            <div class="form-group billing-details d-none">
+            <div id="billing-details" class="d-none">
               <div class="form-group">
-                <input
-                  class="form-input"
-                  type="text"
-                  id="billing-country-input"
-                  placeholder="US"
-                  value="US"
-                />
+                <div class="form-group">
+                  <input
+                      class="form-input"
+                      type="text"
+                      id="billing-country-input"
+                      placeholder="US"
+                      value="US"
+                      />
+                </div>
+                <div class="form-group">
+                  <input
+                      class="form-input"
+                      type="text"
+                      id="billing-zipcode-input"
+                      placeholder="Zip Code"
+                      value=""
+                      />
+                </div>
               </div>
-              <div class="form-group">
-                <input
-                  class="form-input"
-                  type="text"
-                  id="billing-zipcode-input"
-                  placeholder="Zip Code"
-                  value=""
-                />
+              <div id="invoice-amount"></div>
+            </div>
+
+            <div class="columns">
+              <div id="add-card" class="form-group column col-sm-12 d-none">
+                <button id="btn-add-card" class="btn btn-block">Add card</button>
+              </div>
+
+              <div id="pay-new-card" class="form-group column col-sm-12 d-none">
+                <button id="btn-pay-new-card" class="btn btn-block btn-primary">Pay</button>
               </div>
             </div>
-          </div>
-
-          <div id="add-card-js" class="form-group d-none">
-            <button id="btn-add-js" class="btn btn-primary">Add card</button>
-          </div>
-
-          <div class="form-group d-none checkout-form-btn">
-            <button id="pay-btn-js" class="btn btn-primary">Pay</button>
+            <div id="payment-methods-message"></div>
           </div>
 
           <div id="payment-methods"></div>
@@ -130,16 +128,15 @@
               <input
                 class="form-input"
                 type="text"
-                id="new-customer-js"
+                id="new-customer-input"
                 placeholder="email"
                 value=""
               />
             </div>
 
-            <div id="add-user-js" class="form-group">
-              <button id="btn-user-js" class="btn btn-primary">Create User</button>
+            <div class="form-group">
+              <button id="btn-new-user" class="btn btn-block btn-primary">Create User</button>
             </div>
-
           </div>
 
           <div id="new-user-checkout-message"></div>
