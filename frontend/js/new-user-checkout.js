@@ -78,7 +78,7 @@ export default async function newUserCheckout() {
     })
     logObj('Subscription Schedule', subscriptionSchedule)
 
-    const subscription = await _fetch(`/subscriptions/${subscriptionSchedule.subscription}`)
+    const subscription = await _fetch(`/subscriptions/${subscriptionSchedule.subscription.id}`)
     logObj('Subscription', subscription)
 
     const invoice = await _fetch(`/pay-invoice`, 'POST', {
