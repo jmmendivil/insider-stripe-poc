@@ -71,23 +71,35 @@ async function confirmCheckout () {
   const customerInput = document.getElementById('customer-input')
   const customer = await _fetch(`/customer/${customerInput.value}`)
 
-  let subscription = await _fetch(`/customers/${customer.id}/create-subscriptions`, 'POST', {
+  // let subscription = await _fetch(`/customers/${customer.id}/create-subscriptions`, 'POST', {
+  //   priceId: 'price_1KlaEPEv92Ty3pFACO4AZb9K'
+  // })
+  const subscriptionSchedule = await _fetch(`/customers/${customer.id}/create-subscription-schedules`, 'POST', {
     priceId: 'price_1KlaEPEv92Ty3pFACO4AZb9K'
   })
 
+  let paymentIntent = await _fetch(`/customers/${customer.id}/payment-intent/${subscriptionSchedule.subscription.latest_invoice.payment_intent}`)
+
   const { publicKey } = await _fetch('/public-key')
   const stripe = await Stripe(publicKey)
-  let paymentIntent = await stripe.confirmCardPayment(subscription.latest_invoice.payment_intent.client_secret, {
+
+  paymentIntent = await stripe.confirmCardPayment(paymentIntent.client_secret, {
     payment_method: customer.invoice_settings.default_payment_method
   })
 
   if (paymentIntent.error) {
-    showById('checkout-message', `<div class="toast toast-error">${paymentIntent.error.message}</div>`)
+    // delete subscription in backend
   } else {
-    showById('checkout-message', `<div class="toast toast-success">Subscription <pre>${subscription.id}</pre> is active!</div>`)
+    // activate subscription in backend
   }
 
-  subscription = await _fetch(`/subscriptions/${subscription.id}`)
+  if (paymentIntent.error) {
+    showById('checkout-message', `<div class="toast toast-error">${paymentIntent.error.message}</div>`)
+  } else {
+    showById('checkout-message', `<div class="toast toast-success">Subscription <pre>${subscriptionSchedule.subscription.id}</pre> is active!</div>`)
+  }
+
+  const subscription = await _fetch(`/subscriptions/${subscriptionSchedule.subscription.id}`)
 
   showLoading(this, false)
   logObj('Payment Intent', paymentIntent)

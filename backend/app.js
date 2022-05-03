@@ -147,7 +147,7 @@ app.post('/customers/:customerId/create-subscriptions', async (req, res) => {
 
 // - Create a subscription schedule
 app.post('/customers/:customerId/create-subscription-schedules', async (req, res) => {
-  res.send(await stripe.subscriptionSchedules.create({
+ const schedule = await stripe.subscriptionSchedules.create({
     customer: req.params.customerId,
     start_date: 'now',
     end_behavior: 'release',
@@ -161,9 +161,25 @@ app.post('/customers/:customerId/create-subscription-schedules', async (req, res
         items: [{ price: req.body.priceId }],
         iterations: 1
       }
-    ]
-  }))
+    ],
+    expand: ['subscription.latest_invoice']
+  })
+
+  const invoice = await stripe.invoices.finalizeInvoice(schedule.subscription.latest_invoice.id)
+
+  schedule.subscription.latest_invoice = invoice
+
+  res.send(schedule)
 })
+
+// retrieve payment intent secret from invoice
+app.get('/customers/:customerId/payment-intent/:paymentIntentId', async (req, res) => {
+  res.send(await stripe.paymentIntents.retrieve(req.params.paymentIntentId))
+})
+
+
+
+
 
 // - Pay invoice
 app.post('/pay-invoice', async (req, res) => {
