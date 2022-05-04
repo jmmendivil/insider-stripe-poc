@@ -7,12 +7,9 @@ const app = express()
 
 const stripe = require('stripe')(process.env.STRIPE_SK_KEY)
 
-app.use(express.static('public'))
+app.use(express.static(__dirname + '/public'))
 app.use(bodyParser.json())
 app.use(cors())
-
-app.set('views', path.join(__dirname, 'src/views'))
-app.set('view engine', 'hbs')
 
 // - Customer
 app.post('/customers', async (req, res) => {
@@ -199,6 +196,6 @@ app.post('/upcoming-invoice', async (req, res) => {
   }))
 })
 
-app.listen(process.env.HTTP_PORT, () => {
+app.listen(process.env.HTTP_BACKEND_PORT, () => {
   console.log('\x1b[36m%s\x1b[0m',`>> Listening on port ${process.env.HTTP_PORT}!`)
 })

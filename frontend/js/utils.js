@@ -18,15 +18,19 @@ export function showLoading(target, show) {
 }
 
 export function logObj (label, obj) {
+  if (typeof label === 'object') {
+    obj = label
+    label = ''
+  }
   let cons = showNormalConsole
   if (window.webConsole) cons = showWebConsole
   cons(label, obj)
 }
 
 function showNormalConsole(label, obj) {
-  console.group(label)
+  if (label !== '') console.group(label)
   console.dir(obj)
-  console.groupEnd()
+  if (label !== '') console.groupEnd()
 }
 
 function showWebConsole (label = '', obj) {
