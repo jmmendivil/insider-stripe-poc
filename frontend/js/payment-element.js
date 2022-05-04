@@ -6,6 +6,7 @@ const price = 'price_1KlaEPEv92Ty3pFACO4AZb9K'
 export async function setupStripePaymentElement (stripe, setupIntent, publicKey, elementContainer, invoiceContainer) {
   return new Promise(function (resolve) {
 
+    // hide container parent
     elementContainer.parentElement.classList.add('d-none')
 
     const elements = stripe.elements({
@@ -93,19 +94,19 @@ export async function setupStripePaymentElement (stripe, setupIntent, publicKey,
     paymentElement.mount(elementContainer)
     window.pe = paymentElement
     paymentElement.on('change', function (evt) {
-      if (evt.collapsed) {
-        hideById('billing-details')
-        elementContainer.parentElement.classList.remove('d-none')
-      }
+      if (evt.collapsed) hideById('billing-details')
       if (!evt.collapsed) showById('billing-details')
       logObj('change', evt)
     })
 
     paymentElement.on('ready', function (evt) {
-      // :c
+      //
+      // Warning! - Do not try this at home (tmp fix)
+      // 
+      setTimeout(paymentElement.collapse, 500)
       setTimeout(function () {
-        paymentElement.collapse()
-      }, 500)
+        elementContainer.parentElement.classList.remove('d-none')
+      }, 800)
       resolve(elements)
     })
   })
