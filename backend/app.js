@@ -197,5 +197,5 @@ app.post('/upcoming-invoice', async (req, res) => {
 })
 
 app.listen(process.env.HTTP_BACKEND_PORT, () => {
-  console.log('\x1b[36m%s\x1b[0m',`>> Listening on port ${process.env.HTTP_PORT}!`)
+  console.log('\x1b[36m%s\x1b[0m',`>> Listening on port ${process.env.HTTP_BACKEND_PORT}!`)
 })
