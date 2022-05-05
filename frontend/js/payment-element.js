@@ -35,6 +35,9 @@ export async function setupStripePaymentElement (stripe, setupIntent, publicKey,
             border: '0.07rem solid #bcc3ce',
             boxShadow: 'none',
           },
+          '.TabIcon': {
+            fill: 'red'
+          },
         }
       }
     })
