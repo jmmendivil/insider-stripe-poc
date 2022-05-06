@@ -174,7 +174,7 @@ async function setupNewStripeElements (setupIntent, publicKey) {
     })
     logObj('Subscription Schedule', subscriptionSchedule)
 
-    const subscription = await _fetch(`/subscriptions/${subscriptionSchedule.subscription}`)
+    const subscription = await _fetch(`/subscriptions/${subscriptionSchedule.subscription.id}`)
 
     const invoice = await _fetch(`/pay-invoice`, 'POST', {
       invoiceId: subscription.latest_invoice.id
