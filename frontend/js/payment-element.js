@@ -1,19 +1,27 @@
 // TODO: html
-import { _fetch } from './utils'
+import { _fetch, logObj, hideById, showById } from './utils'
 
 const price = 'price_1KlaEPEv92Ty3pFACO4AZb9K'
 
 export async function setupStripePaymentElement (stripe, setupIntent, publicKey, elementContainer, invoiceContainer) {
   return new Promise(function (resolve) {
 
+    // hide container parent
+    elementContainer.parentElement.classList.add('d-none')
+
     const elements = stripe.elements({
       clientSecret: setupIntent.client_secret,
-      loader: 'always',
+      // loader: 'always',
       appearance: {
         variables: {
           borderRadius: '0.1rem',
+          fontSizeBase: '16px'
         },
+        theme: 'none',
         rules: {
+          '.Label': {
+            fontSize: '1rem',
+          },
           '.Input': {
             color: '#3b4351',
             border: '0.07rem solid #bcc3ce',
@@ -21,10 +29,19 @@ export async function setupStripePaymentElement (stripe, setupIntent, publicKey,
             boxShadow: 'none',
             fontSize: '1rem',
             lineHeight: '1.4rem'
-          }
+          },
+          '.Tab': {
+            width: '500px',
+            border: '0.07rem solid #bcc3ce',
+            boxShadow: 'none',
+          },
+          '.TabIcon': {
+            fill: 'red'
+          },
         }
       }
     })
+    logObj('elements', elements)
 
     const countryInput = document.getElementById('billing-country-input')
     const zipInput = document.getElementById('billing-zipcode-input')
@@ -60,6 +77,7 @@ export async function setupStripePaymentElement (stripe, setupIntent, publicKey,
     }
 
     const paymentElement = elements.create('payment', {
+      paymentMethodOrder: ['apple_pay', 'google_pay', 'card'],
       terms: {
         card: 'never',
       },
@@ -77,8 +95,21 @@ export async function setupStripePaymentElement (stripe, setupIntent, publicKey,
       }
     })
     paymentElement.mount(elementContainer)
+    window.pe = paymentElement
+    paymentElement.on('change', function (evt) {
+      if (evt.collapsed) hideById('billing-details')
+      if (!evt.collapsed) showById('billing-details')
+      logObj('change', evt)
+    })
 
-    paymentElement.on('ready', function () {
+    paymentElement.on('ready', function (evt) {
+      //
+      // Warning! - Do not try this at home (tmp fix)
+      // 
+      setTimeout(paymentElement.collapse, 500)
+      setTimeout(function () {
+        elementContainer.parentElement.classList.remove('d-none')
+      }, 800)
       resolve(elements)
     })
   })
